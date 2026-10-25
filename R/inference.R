@@ -493,13 +493,7 @@ bpss_wald <- function(object, level = 0.95) {
       rho = data.frame(lower = numeric(0), upper = numeric(0)),
       se_eta = NA_real_, se_rho = NA_real_, level = level,
       usable = FALSE,
-      reason = if (is.null(fit)) "unrestricted fit unavailable"
-               else if (!isTRUE(fit$ok)) fit$status
-               else if (isTRUE(fit$eta_boundary_hit))
-                 "the estimate of eta is near its bound"
-               else if (isTRUE(fit$coef_boundary_hit))
-                 "a regression coefficient is near its bound"
-               else fit$status
+      reason = .bpss_unrestricted_reason(fit, object$control$eps)
     ))
   eta_int <- wald_eta_interval(fit$eta_hat, fit$J, level = level)
   rho_hat <- tanh(fit$eta_hat)
@@ -564,7 +558,11 @@ bpss_profile <- function(object, levels = c(1/8, 1/32)) {
 #' an outcome probit on the selected units. The efficient score is evaluated at
 #' that fit, with the expected efficient information
 #' \eqn{\hat J_n(0)}{J(0)} as its variance. The likelihood-ratio statistic
-#' against the multi-start unrestricted fit is reported for comparison.
+#' against the multi-start unrestricted fit is reported for comparison. As in
+#' the simulations of the paper, it is computed also when a parameter of the
+#' unrestricted fit is near its bound; the maximum is then over the bounded
+#' parameter space, and \code{lr_reference_at_bound} is \code{TRUE} when the
+#' estimate of \eqn{\eta}{eta} is near its bound.
 #'
 #' @param object A fitted object of class \code{"bpss"}.
 #' @param require_audited_lr Logical; compute the likelihood-ratio statistic
@@ -572,8 +570,9 @@ bpss_profile <- function(object, levels = c(1/8, 1/32)) {
 #'
 #' @return A list with components \code{ok}, \code{status}, \code{U},
 #'   \code{J}, \code{I_etaeta}, \code{J_over_I_etaeta}, \code{Delta},
-#'   \code{T}, \code{p_chisq}, \code{LR}, \code{p_lr}, \code{lr_usable} and
-#'   the null fit.
+#'   \code{T}, \code{p_chisq}, \code{LR}, \code{p_lr}, \code{lr_usable},
+#'   \code{lr_reason} (why the likelihood-ratio statistic was not computed),
+#'   \code{lr_reference_at_bound}, \code{rho_bound} and the null fit.
 #' @export
 test_ignorability <- function(object, require_audited_lr = TRUE) {
   if (!inherits(object, "bpss")) stop("object must be of class 'bpss'.")
@@ -625,7 +624,7 @@ test_ignorability <- function(object, require_audited_lr = TRUE) {
     D, XS, XO, unrestricted = object$unrestricted,
     null_fit = fc,
     require_audited_reference = require_audited_lr,
-    exclude_boundary = TRUE, level = object$level,
+    exclude_boundary = FALSE, level = object$level,
     lr_tol = ctrl$profile_lr_tol,
     eps = ctrl$eps, rcond_tol = ctrl$rcond_tol,
     coef_bound = ctrl$coef_bound, maxit = ctrl$maxit,
@@ -638,6 +637,15 @@ test_ignorability <- function(object, require_audited_lr = TRUE) {
   out$LR <- lr$statistic
   out$p_lr <- lr$p_chisq
   out$lr_usable <- lr$usable
+  out$lr_reason <- if (isTRUE(lr$usable)) NA_character_
+    else if (!isTRUE(lr$reference_ok))
+      "the unrestricted fit is not a converged multi-start fit"
+    else if (isTRUE(lr$reference_dominated))
+      "the constrained fit at rho = 0 exceeds the unrestricted fit"
+    else "the constrained fit at rho = 0 failed"
+  out$lr_reference_at_bound <- isTRUE(lr$usable) &&
+    isTRUE(object$unrestricted$eta_boundary_hit)
+  out$rho_bound <- tanh(ctrl$eta_bound)
   out
 }
 
@@ -707,4 +715,24 @@ bpss_score_test <- function(object, rho) {
   out <- do.call(rbind, rows)
   rownames(out) <- NULL
   out
+}
+
+# Readable reason why the unrestricted fit cannot support Wald inference.
+.bpss_unrestricted_reason <- function(fit, eps = 1e-12) {
+  if (is.null(fit)) return("the unrestricted fit is unavailable")
+  st <- fit$status
+  if (is.null(st) || is.na(st)) st <- ""
+  failed <- switch(st,
+    optim_nonconvergence = "the unrestricted fit did not converge",
+    optim_nonstationary = "the unrestricted fit failed the stationarity check",
+    bad_likelihood = "the log-likelihood at the unrestricted estimate is not finite",
+    bad_information = if (!is.null(fit$info) && isTRUE(fit$info$probability_floor_hit))
+      sprintf("a fitted cell probability at the unrestricted estimate is below %g", eps)
+      else "the information at the unrestricted estimate could not be computed",
+    optim_error = "the optimization failed",
+    NULL)
+  near <- c(if (isTRUE(fit$eta_boundary_hit)) "the estimate of eta is near its bound",
+            if (isTRUE(fit$coef_boundary_hit)) "a regression coefficient is near its bound")
+  out <- c(failed, near)
+  if (!length(out)) "the unrestricted fit failed its checks" else paste(out, collapse = "; ")
 }

@@ -49,7 +49,12 @@
 #' optimization and, by default, a multi-start search over fixed-correlation
 #' starts. It is the centre of the grid continuation, the reference for the
 #' likelihood-ratio statistics and the relative profile likelihood, and the
-#' centre of the Wald interval. The Wald interval is computed only when the
+#' centre of the Wald interval.
+#'
+#' The efficient-score set is the primary inference on \eqn{\rho}{rho}. The
+#' Wald interval relies on a quadratic approximation to the log-likelihood at
+#' the unrestricted estimate, can be unreliable when the efficient information
+#' is small, and is reported for comparison. It is computed only when the
 #' unrestricted fit passes its convergence, stationarity and information checks
 #' and no parameter is near its bound; the further profile-likelihood condition
 #' applied to Wald intervals in the simulations of the paper is not implemented.

@@ -63,13 +63,16 @@ The score confidence set is computed on a grid of correlations (201 values on
 [-0.99, 0.99] by default), with endpoints refined where the decision changes.
 Grid values at which the statistic cannot be computed are reported, and a
 finer grid can be requested with `bpss_control(grid_length = )`. The
-unrestricted fit uses a multi-start search. The Wald interval is computed only
-when that fit passes its checks and no parameter is near its bound; the
-further profile-likelihood condition applied to Wald intervals in the
-simulations of the paper is not implemented.
+efficient-score set is the primary inference on the correlation. The
+unrestricted fit uses a multi-start search, and the Wald interval centred at it
+is reported for comparison; it can be unreliable when the efficient information
+is small. The Wald interval is computed only when that fit passes its checks
+and no parameter is near its bound; the further profile-likelihood condition
+applied to Wald intervals in the simulations of the paper is not implemented.
 
 The tests in `tests/testthat` reproduce design-level information values
-reported in the paper and check the information identities, the analytic
+reported in the paper and check the information identities, the zero-information
+locus and fourth-order decay of the efficient information, the analytic
 derivative used in the exclusion decomposition and the factorized fit at
 independence.
 

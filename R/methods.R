@@ -138,8 +138,9 @@ new_bpss_set <- function(intervals, parm, level, method, refined = NA,
            bad_information_or_score = "the information or score could not be computed",
            "the constrained fit failed its checks")
   }, character(1))
-  sprintf("statistic not computed at rho = %s (%s)",
-          .bpss_list_text(where), paste(unique(reason), collapse = "; "))
+  sprintf("statistic not computed at rho = %s (%s); whether %s to the set is not determined",
+          .bpss_list_text(where), paste(unique(reason), collapse = "; "),
+          if (length(ii) == 1L) "this value belongs" else "these values belong")
 }
 
 .bpss_list_text <- function(x) {
@@ -417,17 +418,24 @@ print.summary.bpss <- function(x, digits = 4, ...) {
     x$coefficients, digits = digits, signif.stars = FALSE,
     has.Pvalue = TRUE, na.print = ""
   )
-  cat("No Wald test is reported for eta; inference on rho uses the efficient score below.\n")
+  if (isTRUE(x$wald_usable))
+    cat("No z statistic is given for eta; use the efficient-score results for rho.\n")
+  else
+    cat(sprintf("No z statistics are given: %s.\n",
+                x$wald$reason %||% "the unrestricted fit failed its checks"))
   cat(sprintf(
     "\nrho_hat = %.*f   eta_hat = %.*f   largest projected-gradient component = %.*g\n",
     digits, x$rho_hat, digits, x$eta_hat,
     max(digits, 4L), x$projected_gradient_norm
   ))
-  cat(sprintf(
-    "At the estimate: J_n = %.*f; J_n / I_etaeta,n = %.*g; Delta_n = %.*g\n",
-    digits, x$J, max(digits, 4L), x$J / x$I_etaeta,
-    max(digits, 4L), x$Delta
-  ))
+  if (is.finite(x$J))
+    cat(sprintf(
+      "At the estimate: J_n = %.*f; J_n / I_etaeta,n = %.*g; Delta_n = %.*g\n",
+      digits, x$J, max(digits, 4L), x$J / x$I_etaeta,
+      max(digits, 4L), x$Delta
+    ))
+  else
+    cat("At the estimate: the efficient information was not computed.\n")
   if (isTRUE(x$eta_boundary_hit))
     cat("Note: the estimate of eta is near its bound.\n")
   if (isTRUE(x$coef_boundary_hit))
@@ -437,18 +445,9 @@ print.summary.bpss <- function(x, digits = 4, ...) {
   if (isTRUE(x$default_discordance))
     cat("Note: the single-start and multi-start fits differ materially under the audit rule.\n")
 
-  if (!is.null(x$wald)) {
-    if (isTRUE(x$wald$usable))
-      cat(sprintf("\n%.0f%% Wald interval (rho): %s\n",
-                  100 * x$level,
-                  .fmt_set(x$wald$rho, digits = 3)))
-    else
-      cat(sprintf("\nWald interval not computed: %s.\n",
-                  x$wald$reason %||% "the unrestricted fit failed its checks"))
-  }
   if (!is.null(x$grid)) {
     tab <- x$grid$table
-    cat(sprintf("%.0f%% efficient-score set (rho): %s\n",
+    cat(sprintf("\n%.0f%% efficient-score set (rho): %s\n",
                 100 * x$level, .fmt_set(x$grid$score_rho_set, digits = 3)))
     cat(sprintf("  %s.\n", .bpss_grid_note(tab, x$grid_refined)))
     un <- .bpss_unresolved_note(tab)
@@ -479,16 +478,29 @@ print.summary.bpss <- function(x, digits = 4, ...) {
     }
   }
 
+  if (!is.null(x$wald)) {
+    if (isTRUE(x$wald$usable))
+      cat(sprintf("\n%.0f%% Wald interval (rho), for comparison: %s\n",
+                  100 * x$level,
+                  .fmt_set(x$wald$rho, digits = 3)))
+    else
+      cat(sprintf("\nWald interval not computed: %s.\n",
+                  x$wald$reason %||% "the unrestricted fit failed its checks"))
+  }
+
   ig <- x$ignorability
   if (!is.null(ig) && isTRUE(ig$ok)) {
     cat(sprintf(
       "\nTest of ignorable selection (rho = 0): score T = %.3f, p = %.4f",
       ig$T, ig$p_chisq
     ))
-    if (isTRUE(ig$lr_usable))
+    if (isTRUE(ig$lr_usable)) {
       cat(sprintf("; LR = %.3f, p = %.4f", ig$LR, ig$p_lr))
-    else
-      cat("; LR not computed")
+      if (isTRUE(ig$lr_reference_at_bound))
+        cat(sprintf(" (unrestricted estimate near the bound |rho| = %.3f)", ig$rho_bound))
+    } else {
+      cat(sprintf("; LR not computed (%s)", ig$lr_reason %||% "no valid reference fit"))
+    }
     cat(sprintf(
       "\n  J_n(0) = %.*f; J_n(0) / I_etaeta,n(0) = %.*g; Delta_n(0) = %.*g\n",
       digits, ig$J, max(digits, 4L),

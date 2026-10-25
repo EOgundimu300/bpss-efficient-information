@@ -312,6 +312,9 @@ bpss_info_array <- function(theta, XS, XO, eps = 1e-12,
   cd <- bpss_cell_derivatives_vec(theta, XS, XO, eps = eps)
   Darr <- cd$D
   prob_w <- cd$prob_w
+  if (any(prob_w <= 0))
+    stop("a cell probability is zero in double precision; ",
+         "the information cannot be computed at these parameter values.")
   n <- dim(Darr)[1]
   ptheta <- dim(Darr)[3]
   idx_eta <- ptheta
@@ -377,6 +380,9 @@ bpss_info_compact <- function(theta, XS, XO, eps = 1e-12,
   pc <- .bpss_prob_core(a, b, rho)
   prob <- pc$prob
   prob_w <- pmax(prob, eps)
+  if (any(prob_w <= 0))
+    stop("a cell probability is zero in double precision; ",
+         "the information cannot be computed at these parameter values.")
   p0 <- prob_w[, "p0"]
   p10 <- prob_w[, "p10"]
   p11 <- prob_w[, "p11"]

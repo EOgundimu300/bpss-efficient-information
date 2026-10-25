@@ -15,8 +15,9 @@ only when the unrestricted reference fit passed the multi-start search.}
 \value{
 A list with components \code{ok}, \code{status}, \code{U},
   \code{J}, \code{I_etaeta}, \code{J_over_I_etaeta}, \code{Delta},
-  \code{T}, \code{p_chisq}, \code{LR}, \code{p_lr}, \code{lr_usable} and
-  the null fit.
+  \code{T}, \code{p_chisq}, \code{LR}, \code{p_lr}, \code{lr_usable},
+  \code{lr_reason} (why the likelihood-ratio statistic was not computed),
+  \code{lr_reference_at_bound}, \code{rho_bound} and the null fit.
 }
 \description{
 Efficient-score test of \eqn{\rho = 0}{rho = 0}. At \eqn{\eta = 0}{eta = 0}
@@ -24,5 +25,9 @@ the constrained likelihood separates into a selection probit on all units and
 an outcome probit on the selected units. The efficient score is evaluated at
 that fit, with the expected efficient information
 \eqn{\hat J_n(0)}{J(0)} as its variance. The likelihood-ratio statistic
-against the multi-start unrestricted fit is reported for comparison.
+against the multi-start unrestricted fit is reported for comparison. As in
+the simulations of the paper, it is computed also when a parameter of the
+unrestricted fit is near its bound; the maximum is then over the bounded
+parameter space, and \code{lr_reference_at_bound} is \code{TRUE} when the
+estimate of \eqn{\eta}{eta} is near its bound.
 }

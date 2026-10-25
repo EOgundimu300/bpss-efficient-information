@@ -70,3 +70,14 @@ test_that("the smallest cell probability is recorded when the statistic is not c
   if (isTRUE(grepl("probability", fc$information_error)))
     expect_lt(fc$min_cell_probability, 1e-12)
 })
+
+test_that("the likelihood-ratio test of rho = 0 is computed when eta is near its bound", {
+  f2 <- fit
+  f2$unrestricted$eta_boundary_hit <- TRUE
+  ig2 <- test_ignorability(f2)
+  expect_true(ig2$lr_usable)
+  expect_true(ig2$lr_reference_at_bound)
+  expect_equal(ig2$LR, test_ignorability(fit)$LR)
+  f2$ignorability <- ig2
+  expect_output(print(summary(f2)), "near the bound")
+})
