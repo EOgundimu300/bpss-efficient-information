@@ -9,7 +9,7 @@ bpss_score_test(object, rho)
 \arguments{
 \item{object}{A fitted object of class \code{"bpss"}.}
 
-\item{rho}{Hypothesized correlations in \eqn{(-1, 1)}.}
+\item{rho}{Hypothesized correlations in \eqn{(-1, 1)}{(-1, 1)}.}
 }
 \value{
 A data frame with one row per value of \code{rho}, giving
@@ -19,20 +19,22 @@ A data frame with one row per value of \code{rho}, giving
   status.
 }
 \description{
-Computes the statistic \eqn{T_n(\eta^\star) = \hat U_n(\eta^\star)^2 /
-\hat J_n(\eta^\star)} at each hypothesized correlation
-\eqn{\rho^\star = \tanh(\eta^\star)}, where \eqn{\hat U_n} is the efficient
-score and \eqn{\hat J_n} the expected efficient information, both evaluated
-at the nuisance coefficients maximizing the likelihood with \eqn{\eta}
-fixed at \eqn{\eta^\star}. The p-value is \eqn{1 - F_{\chi^2_1}(T_n)}.
+Computes
+\eqn{T_n(\eta^\star) = \hat U_n(\eta^\star)^2 / \hat J_n(\eta^\star)}{T(eta*) = U(eta*)^2 / J(eta*)}
+at each hypothesized correlation \eqn{\rho^\star = \tanh(\eta^\star)}{rho* = tanh(eta*)},
+where \eqn{\hat U_n}{U} is the efficient score and \eqn{\hat J_n}{J} the
+expected efficient information, both evaluated at the regression
+coefficients that maximize the likelihood with \eqn{\eta}{eta} fixed at
+\eqn{\eta^\star}{eta*}. The p-value is computed from the
+\eqn{\chi^2_1}{chi-squared(1)} distribution.
 }
 \details{
-The constrained fit is started from the unrestricted nuisance estimate, from
-separate selection and selected-outcome probit fits and, when it differs,
-from the single-start unrestricted fit; the fit with the largest
-log-likelihood is used. The statistic is not computed if this fit fails
-its convergence, stationarity, cell-probability or nuisance-information
-checks, or if a regression coefficient is near its bound.
+The constrained fit is started from the unrestricted estimate, from separate
+selection and selected-outcome probit fits and, when it differs, from the
+single-start unrestricted fit; the fit with the largest log-likelihood is
+used. The statistic is not computed if this fit fails its convergence,
+stationarity, cell-probability or nuisance-information checks, or if a
+regression coefficient is near its bound.
 }
 \seealso{
 \code{\link{test_ignorability}}, \code{\link{confint.bpss}}

@@ -51,3 +51,22 @@ test_that("missing covariates are reported", {
                                              audit_unrestricted = FALSE)),
                  "missing covariates")
 })
+
+test_that("the factorized fit at rho = 0 is the constrained maximum", {
+  nf <- bpssInfo:::bpss_fit_null_factorized(fit$D, fit$XS, fit$XO,
+                                             check_generic = TRUE)
+  expect_true(nf$ok)
+  expect_identical(nf$status, "ok")
+  expect_true(isTRUE(nf$generic_agrees))
+  expect_lt(abs(nf$factorization_error), 1e-8)
+  gc <- bpssInfo:::bpss_fit_constrained(0, fit$D, fit$XS, fit$XO)
+  expect_lt(abs(gc$logLik - nf$logLik), 1e-6)
+  expect_equal(gc$T_score, nf$T_score, tolerance = 1e-4)
+})
+
+test_that("the smallest cell probability is recorded when the statistic is not computed", {
+  fc <- bpssInfo:::bpss_fit_constrained(atanh(0.99), fit$D, fit$XS, fit$XO)
+  expect_true(is.finite(fc$min_cell_probability))
+  if (isTRUE(grepl("probability", fc$information_error)))
+    expect_lt(fc$min_cell_probability, 1e-12)
+})

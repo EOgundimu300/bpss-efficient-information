@@ -16,53 +16,67 @@
 #' Bivariate probit sample selection model with efficient-score inference
 #'
 #' Fits the bivariate probit sample selection model and inverts the efficient
-#' score test of \eqn{\eta = \mathrm{atanh}(\rho)} on a grid of hypothesized
-#' correlations. At each value \eqn{\eta^\star} the regression coefficients are
-#' estimated with \eqn{\eta} fixed, and
-#' \eqn{T_n(\eta^\star) = \hat U_n(\eta^\star)^2 / \hat J_n(\eta^\star)} is
-#' referred to the \eqn{\chi^2_1} distribution, where \eqn{\hat J_n} is the
-#' expected efficient information at the constrained fit.
+#' score test of \eqn{\eta = \mathrm{atanh}(\rho)}{eta = atanh(rho)} on a grid of
+#' hypothesized correlations.
+#'
+#' The model has latent equations
+#' \eqn{Y^* = x^\top\beta + \varepsilon_1}{Y* = x'beta + e1} for the outcome and
+#' \eqn{S^* = w^\top\gamma + \varepsilon_2}{S* = w'gamma + e2} for selection, where
+#' \eqn{(\varepsilon_1, \varepsilon_2)}{(e1, e2)} is standard bivariate normal
+#' with correlation \eqn{\rho}{rho}. The selection indicator
+#' \eqn{S = 1(S^* > 0)}{S = 1(S* > 0)} is observed for every unit, and the outcome
+#' \eqn{Y = 1(Y^* > 0)}{Y = 1(Y* > 0)} only when \eqn{S = 1}{S = 1}.
+#'
+#' At each hypothesized value \eqn{\eta^\star}{eta*} the regression coefficients
+#' are estimated with \eqn{\eta}{eta} fixed, and
+#' \eqn{T_n(\eta^\star) = \hat U_n(\eta^\star)^2 / \hat J_n(\eta^\star)}{T(eta*) = U(eta*)^2 / J(eta*)}
+#' is referred to the \eqn{\chi^2_1}{chi-squared(1)} distribution, where
+#' \eqn{\hat U_n}{U} is the efficient score and \eqn{\hat J_n}{J} the expected
+#' efficient information at the constrained fit. The confidence set consists of
+#' the evaluated grid values at which the test does not reject, with endpoints
+#' refined where the decision changes between neighbouring grid values. A
+#' component narrower than the grid spacing can be missed; a finer grid
+#' (\code{grid_length} in \code{\link{bpss_control}}, or \code{eta_grid})
+#' reduces this risk. Grid values at which the statistic cannot be computed are
+#' reported, and a component reaching an end of the grid is reported only up to
+#' that end. The paper recommends reporting, for each component that does not
+#' contain the estimate or that reaches an end of the grid, the relative profile
+#' likelihood and the ranges of \eqn{\hat J_n}{J},
+#' \eqn{\hat J_n / \hat I_{\eta\eta,n}}{J / I_etaeta} and
+#' \eqn{\hat\Delta_n}{Delta}; \code{summary()} prints these.
 #'
 #' The unrestricted maximum-likelihood fit is obtained by bounded L-BFGS-B
 #' optimization and, by default, a multi-start search over fixed-correlation
-#' starts. It provides the continuation centre for the grid, the reference for
-#' the likelihood-ratio statistic and relative profile likelihood, and the Wald
-#' interval. The Wald interval is computed only when the unrestricted fit
-#' passes its convergence, stationarity and information checks and no parameter
-#' is near its bound; the simulations of the paper apply a further profile
-#' check (Section S5.1) that is not implemented here.
+#' starts. It is the centre of the grid continuation, the reference for the
+#' likelihood-ratio statistics and the relative profile likelihood, and the
+#' centre of the Wald interval. The Wald interval is computed only when the
+#' unrestricted fit passes its convergence, stationarity and information checks
+#' and no parameter is near its bound; the further profile-likelihood condition
+#' applied to Wald intervals in the simulations of the paper is not implemented.
 #'
-#' The reported score set consists of the evaluated grid values at which the
-#' test does not reject, with endpoints refined at changes in the decision.
-#' Grid values at which the statistic cannot be computed are counted
-#' separately, and a component reaching a grid end is reported only up to that
-#' end. Section 4.2 of the paper recommends reporting, for each component that
-#' does not contain the estimate or that reaches a grid end, the relative
-#' profile likelihood and the ranges of \eqn{\hat J_n}, \eqn{\hat J_n / \hat
-#' I_{\eta\eta,n}} and \eqn{\hat\Delta_n}; \code{summary()} prints these.
+#' Covariates must be observed for every unit, including unselected units,
+#' because the expected information sums over all units.
 #'
-#' Covariates must be observed for all rows, including unselected rows, because
-#' the expected information sums over all units. The outcome may be \code{NA}
-#' when the selection indicator is 0.
-#'
-#' @param selection Formula for the selection equation, with the binary
-#'   selection indicator on the left-hand side.
-#' @param outcome Formula for the outcome equation, with the binary outcome on
-#'   the left-hand side.
+#' @param selection Formula for the selection equation, with the selection
+#'   indicator (0/1, logical or a two-level factor) on the left-hand side.
+#' @param outcome Formula for the outcome equation, with the binary outcome
+#'   (0/1, logical or a two-level factor) on the left-hand side; the outcome may
+#'   be \code{NA} when the selection indicator is 0.
 #' @param data A data frame.
 #' @param subset Optional expression selecting rows of \code{data}.
-#' @param eta_grid Optional grid of \eqn{\eta = \mathrm{atanh}(\rho)} values;
-#'   by default \code{control$grid_length} equally spaced values of \eqn{\rho}
-#'   on \code{control$grid_rho}. The value 0 is always added.
+#' @param eta_grid Optional grid of \eqn{\eta}{eta} values; by default
+#'   \code{control$grid_length} equally spaced values of \eqn{\rho}{rho} on
+#'   \code{control$grid_rho}. The value 0 is always added.
 #' @param level Confidence level.
 #' @param control Numerical controls from \code{\link{bpss_control}}.
 #'
 #' @return An object of class \code{"bpss"}, a list including the unrestricted
 #'   fits (\code{unrestricted}, \code{unrestricted_default},
 #'   \code{unrestricted_audited}), the grid inversion (\code{grid}, whose
-#'   \code{table} holds the statistic, p-value, \eqn{\hat J_n}, \eqn{\hat
-#'   I_{\eta\eta,n}}, \eqn{\hat\Delta_n} and \eqn{-2\log R_n} at each grid
-#'   value), the Wald interval (\code{wald}), the test of \eqn{\rho = 0}
+#'   \code{table} holds at each grid value the statistic, its p-value,
+#'   \eqn{\hat J_n}{J}, \eqn{\hat I_{\eta\eta,n}}{I_etaeta}, \eqn{\hat\Delta_n}{Delta},
+#'   the smallest fitted cell probability and \eqn{-2\log R_n}{-2 log R}), the
+#'   Wald interval (\code{wald}), the test of \eqn{\rho = 0}{rho = 0}
 #'   (\code{ignorability}) and the design matrices.
 #'
 #' @references Ogundimu, E. O. Efficient information for the dependence
@@ -74,17 +88,17 @@
 #' @examples
 #' set.seed(1)
 #' n <- 800
-#' x <- rnorm(n)
-#' v <- rnorm(n)
+#' x <- rnorm(n)                            # covariate in both equations
+#' v <- rnorm(n)                            # selection-only covariate
 #' e1 <- rnorm(n)
-#' e2 <- 0.5 * e1 + sqrt(0.75) * rnorm(n)   # corr(e1, e2) = 0.5
+#' e2 <- 0.5 * e1 + sqrt(0.75) * rnorm(n)   # errors with correlation 0.5
 #' s <- as.integer(0.3 + 0.5 * x + 0.8 * v + e2 > 0)
 #' y <- ifelse(s == 1, as.integer(-0.4 + 0.6 * x + e1 > 0), NA)
 #' dat <- data.frame(s, y, x, v)
-#' fit <- bpss(s ~ x + v, y ~ x, data = dat,
-#'             control = bpss_control(grid_length = 41))
+#' fit <- bpss(s ~ x + v, y ~ x, data = dat)
 #' summary(fit)
 #' confint(fit)
+#' plot(fit, "score")
 #' @export
 bpss <- function(selection, outcome, data, subset = NULL,
                  eta_grid = NULL, level = 0.95,
@@ -261,8 +275,8 @@ bpss <- function(selection, outcome, data, subset = NULL,
 #'   nuisance information.
 #' @param coef_bound Bound on the absolute value of each regression
 #'   coefficient during optimization.
-#' @param eta_bound Bound on \eqn{|\eta|}; the default corresponds to
-#'   \eqn{|\rho| \le 0.995}.
+#' @param eta_bound Bound on \eqn{|\eta|}{|eta|}; the default corresponds to
+#'   \eqn{|\rho| \le 0.995}{|rho| <= 0.995}.
 #' @param maxit,optim_factr,optim_pgtol Settings of the first L-BFGS-B run; a
 #'   failed or nonstationary run is retried with \code{2 * maxit} iterations
 #'   and \code{factr = min(optim_factr, 1e4)}.
@@ -271,9 +285,9 @@ bpss <- function(selection, outcome, data, subset = NULL,
 #' @param boundary_fraction A parameter is classed as near its bound when its
 #'   absolute value is at least this fraction of the bound.
 #' @param grid_length,grid_rho Number and range of equally spaced values of
-#'   \eqn{\rho} in the inversion grid.
+#'   \eqn{\rho}{rho} in the inversion grid.
 #' @param refine_grid,refine_tol Refine set endpoints at changes in the
-#'   decision, with this root-finding tolerance on the \eqn{\eta} scale.
+#'   decision, with this root-finding tolerance on the \eqn{\eta}{eta} scale.
 #' @param do_grid Logical; invert the score test on the grid.
 #' @param audit_unrestricted Logical; obtain the unrestricted fit by
 #'   multi-start search. Required for the likelihood-ratio statistics and the
@@ -286,7 +300,7 @@ bpss <- function(selection, outcome, data, subset = NULL,
 #'   different when they differ by more than
 #'   \code{max(audit_ll_tol, audit_ll_rel_tol * max(1, |logLik|))}.
 #' @param audit_rho_tol,audit_eta_se_tol Thresholds on differences in
-#'   \eqn{\hat\rho}, and in \eqn{\hat\eta} in standard-error units, that
+#'   \eqn{\hat\rho}{rho-hat}, and in \eqn{\hat\eta}{eta-hat} in standard-error units, that
 #'   trigger the remaining starts and the discordance flags.
 #' @param audit_top_starts Number of constrained fits with the largest
 #'   log-likelihoods used as initial unrestricted starts, in addition to the
@@ -300,9 +314,9 @@ bpss <- function(selection, outcome, data, subset = NULL,
 #' @param grid_audit_stride Spacing of the regular audit checkpoints.
 #' @param require_audited_profile Logical; compute likelihood-ratio
 #'   statistics only against an audited unrestricted fit.
-#' @param profile_lr_tol A constrained fit whose log-likelihood exceeds the
-#'   reference by more than half this value invalidates the profile (the
-#'   threshold is on the \eqn{2\log}-likelihood scale).
+#' @param profile_lr_tol A constrained fit whose log-likelihood exceeds that of
+#'   the reference fit by more than half this value invalidates the profile
+#'   likelihood.
 #'
 #' @return A list of control values.
 #' @export

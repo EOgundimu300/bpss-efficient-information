@@ -13,16 +13,17 @@ bpss_profile(object, levels = c(1/8, 1/32))
 }
 \value{
 A list with \code{curve}, a data frame with columns \code{eta},
-  \code{rho}, \code{LR} (\eqn{-2 \log R_n}) and \code{R} (\eqn{R_n}),
-  \code{levels}, and \code{rho_sets}, the grid-resolution sets on the
-  correlation scale.
+  \code{rho}, \code{LR} (\eqn{-2\log R_n}{-2 log R}) and \code{R}
+  (\eqn{R_n}{R}), \code{levels}, and \code{rho_sets}, the sets on the
+  correlation scale at grid resolution.
 }
 \description{
 Returns the relative profile likelihood
-\eqn{R_n(\eta^\star) = \exp\{\ell_n^p(\eta^\star) - \sup_\eta \ell_n^p(\eta)\}}
-at the grid values of a fitted \code{"bpss"} object, with the audited
-unrestricted fit as the reference, and the sets on which \eqn{R_n} is at
-least each of \code{levels}.
+\eqn{R_n(\eta^\star) = \exp\{\ell_n^p(\eta^\star) - \sup_\eta \ell_n^p(\eta)\}}{R(eta*) = exp{lp(eta*) - sup lp(eta)}}
+at the grid values of a fitted \code{"bpss"} object, where
+\eqn{\ell_n^p}{lp} is the profile log-likelihood and the multi-start
+unrestricted fit is the reference, together with the sets on which
+\eqn{R_n}{R} is at least each of \code{levels}.
 }
 \seealso{
 \code{\link{bpss}}, \code{\link{plot.bpss}}

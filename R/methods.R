@@ -5,16 +5,21 @@
 #'
 #' Printing, summary and extractor methods for objects returned by
 #' \code{\link{bpss}}. Coefficients are displayed in the order outcome
-#' (\eqn{\beta}), selection (\eqn{\gamma}), \eqn{\eta = \mathrm{atanh}(\rho)}.
-#' Standard errors use the inverse expected information at the unrestricted
-#' estimate; z statistics and p-values are reported only when the Wald
-#' interval is computed (see \code{\link{bpss}}).
+#' (\eqn{\beta}{beta}), selection (\eqn{\gamma}{gamma}),
+#' \eqn{\eta = \mathrm{atanh}(\rho)}{eta = atanh(rho)}. Standard errors use the
+#' inverse expected information at the unrestricted estimate. z statistics and
+#' p-values for the regression coefficients are reported only when the Wald
+#' interval is computed (see \code{\link{bpss}}); none is reported for
+#' \eqn{\eta}{eta}, for which the efficient-score results should be used.
 #'
-#' \code{summary()} also reports, for each connected component of the score
-#' confidence set, whether it contains the unrestricted estimate or reaches a
-#' grid boundary, the largest relative profile likelihood over its evaluated
-#' grid values, and the ranges of \eqn{\hat J_n}, \eqn{\hat J_n / \hat
-#' I_{\eta\eta,n}} and \eqn{\hat\Delta_n} there (Section 4.2 of the paper).
+#' \code{summary()} reports the efficient-score confidence set with the grid on
+#' which it was computed and any grid values at which the statistic was not
+#' computed. For each connected component of the set it also reports whether
+#' the component contains the unrestricted estimate or reaches an end of the
+#' grid, the largest relative profile likelihood over its evaluated grid
+#' values, and the ranges of \eqn{\hat J_n}{J},
+#' \eqn{\hat J_n / \hat I_{\eta\eta,n}}{J / I_etaeta} and
+#' \eqn{\hat\Delta_n}{Delta} there, as recommended in the paper.
 #'
 #' @param x,object A fitted object of class \code{"bpss"} (or its summary,
 #'   confidence set or decomposition, as appropriate).
@@ -85,11 +90,12 @@ logLik.bpss <- function(object, ...) {
 nobs.bpss <- function(object, ...) nrow(object$D)
 
 # Confidence-set class: a data frame of intervals (lower, upper) with the
-# level, method and diagnostic flags as attributes.
+# level, method and diagnostic notes as attributes.
 new_bpss_set <- function(intervals, parm, level, method, refined = NA,
                          disconnected = FALSE, edge = FALSE,
                          unresolved = 0L, usable = TRUE,
-                         reason = NA_character_) {
+                         reason = NA_character_, grid_note = NA_character_,
+                         unresolved_note = NA_character_) {
   if (is.null(intervals)) intervals <- data.frame(lower = numeric(0), upper = numeric(0))
   intervals <- as.data.frame(intervals)
   attr(intervals, "parm") <- parm
@@ -101,8 +107,59 @@ new_bpss_set <- function(intervals, parm, level, method, refined = NA,
   attr(intervals, "unresolved") <- as.integer(unresolved)
   attr(intervals, "usable") <- isTRUE(usable)
   attr(intervals, "reason") <- reason
+  attr(intervals, "grid_note") <- grid_note
+  attr(intervals, "unresolved_note") <- unresolved_note
   class(intervals) <- c("bpss_set", "data.frame")
   intervals
+}
+
+# Grid values at which the score statistic was not computed, as text, with
+# the reasons; NULL when the statistic was computed everywhere.
+.bpss_unresolved_note <- function(tab, digits = 3) {
+  ii <- which(!tab$resolved)
+  if (!length(ii)) return(NULL)
+  runs <- split(ii, cumsum(c(TRUE, diff(ii) != 1L)))
+  where <- vapply(runs, function(j)
+    if (length(j) == 1L) sprintf("%.*f", digits, tab$rho[j])
+    else sprintf("%.*f to %.*f", digits, min(tab$rho[j]), digits, max(tab$rho[j])),
+    character(1))
+  reason <- vapply(ii, function(j) {
+    e <- tab$information_error[j]
+    if (!is.na(e)) return(sub("[.]$", "", e))
+    if (isTRUE(tab$coef_boundary_hit[j]))
+      return("a regression coefficient is near its bound")
+    st <- tab$status[j]
+    if (is.na(st)) st <- ""
+    switch(st,
+           constrained_nonconvergence = "the constrained fit did not converge",
+           constrained_nonstationary = "the constrained fit failed the stationarity check",
+           bad_likelihood = "the log-likelihood is not finite",
+           constrained_error = , constrained_optim_error = "the constrained fit failed",
+           bad_information_or_score = "the information or score could not be computed",
+           "the constrained fit failed its checks")
+  }, character(1))
+  sprintf("statistic not computed at rho = %s (%s)",
+          .bpss_list_text(where), paste(unique(reason), collapse = "; "))
+}
+
+.bpss_list_text <- function(x) {
+  if (length(x) <= 1L) return(x)
+  paste(paste(x[-length(x)], collapse = ", "), "and", x[length(x)])
+}
+
+.bpss_grid_note <- function(tab, refined) {
+  sprintf("computed on %d grid values of rho in [%.3f, %.3f]%s", nrow(tab),
+          min(tab$rho), max(tab$rho),
+          if (isTRUE(refined)) ", with endpoints refined where the decision changes"
+          else ", with endpoints at grid resolution")
+}
+
+# Three significant digits, keeping trailing zeros; scientific when small.
+.fmt3 <- function(x) {
+  if (length(x) != 1L || !is.finite(x)) return("NA")
+  if (x != 0 && (abs(x) < 1e-3 || abs(x) >= 1e5))
+    return(formatC(x, digits = 2, format = "e"))
+  sub("[.]$", "", trimws(formatC(signif(x, 3), digits = 3, format = "fg", flag = "#")))
 }
 
 #' @rdname bpss-methods
@@ -122,16 +179,13 @@ print.bpss_set <- function(x, digits = 4, ...) {
   if (nrow(y) == 0L) cat("  empty on the evaluated grid\n")
   else print(y, row.names = FALSE, digits = digits)
   notes <- character(0)
-  if (identical(method, "score"))
-    notes <- c(notes, if (isTRUE(attr(x, "refined")))
-      "endpoints refined at changes in the decision"
-      else "endpoints at grid resolution")
+  gn <- attr(x, "grid_note")
+  if (identical(method, "score") && is.character(gn) && !is.na(gn)) notes <- c(notes, gn)
   if (isTRUE(attr(x, "disconnected"))) notes <- c(notes, "disconnected set")
   if (isTRUE(attr(x, "edge")))
-    notes <- c(notes, "a component reaches a grid boundary and is reported only up to it")
-  u <- attr(x, "unresolved")
-  if (!is.null(u) && u > 0L)
-    notes <- c(notes, sprintf("statistic not computed at %d grid value(s)", u))
+    notes <- c(notes, "a component reaches an end of the grid and is reported only up to it")
+  un <- attr(x, "unresolved_note")
+  if (is.character(un) && !is.na(un)) notes <- c(notes, un)
   if (length(notes)) cat(paste0("  note: ", notes, "\n"), sep = "")
   invisible(x)
 }
@@ -139,11 +193,13 @@ print.bpss_set <- function(x, digits = 4, ...) {
 #' Confidence sets for the correlation
 #'
 #' Efficient-score confidence set (the default) or Wald interval for
-#' \eqn{\rho} or \eqn{\eta = \mathrm{atanh}(\rho)}.
+#' \eqn{\rho}{rho} or \eqn{\eta = \mathrm{atanh}(\rho)}{eta = atanh(rho)}.
 #'
 #' At the level used in the fit, the score set is the stored set with refined
 #' endpoints. At another level it is recomputed from the stored grid values,
-#' with endpoints at grid resolution.
+#' with endpoints at grid resolution. The printed notes give the grid, any grid
+#' values at which the statistic was not computed, and whether a component
+#' reaches an end of the grid.
 #'
 #' @param object A fitted object of class \code{"bpss"}.
 #' @param parm \code{"rho"} or \code{"eta"}.
@@ -185,12 +241,15 @@ confint.bpss <- function(object, parm = c("rho", "eta"), level = NULL,
     unres <- sum(!(gi$table$resolved & is.finite(curve$p)))
   }
   score_usable <- gi$n_resolved > 0L
+  un <- .bpss_unresolved_note(gi$table)
   new_bpss_set(
     set, parm = parm, level = level, method = "score", refined = refined,
     disconnected = disc, edge = edge, unresolved = unres,
     usable = score_usable,
     reason = if (score_usable) NA_character_
-             else "the statistic was not computed at any grid value"
+             else "the statistic was not computed at any grid value",
+    grid_note = .bpss_grid_note(gi$table, refined && isTRUE(object$control$refine_grid)),
+    unresolved_note = if (is.null(un)) NA_character_ else un
   )
 }
 
@@ -201,8 +260,8 @@ confint.bpss <- function(object, parm = c("rho", "eta"), level = NULL,
 #'   by default the data used in the fit.
 #' @param type \code{"cell"} for the probabilities of the three observed cells
 #'   (S = 0; S = 1, Y = 0; S = 1, Y = 1), \code{"selection"} for
-#'   \eqn{\mathrm{pr}(S = 1)}, or \code{"conditional"} for
-#'   \eqn{\mathrm{pr}(Y = 1 \mid S = 1)}.
+#'   \eqn{\mathrm{pr}(S = 1)}{pr(S = 1)}, or \code{"conditional"} for
+#'   \eqn{\mathrm{pr}(Y = 1 \mid S = 1)}{pr(Y = 1 | S = 1)}.
 #' @param ... Ignored.
 #' @return A matrix (\code{type = "cell"}) or a numeric vector, evaluated at
 #'   the unrestricted estimate.
@@ -252,6 +311,10 @@ summary.bpss <- function(object, ...) {
   p <- if (wald_valid)
     2 * stats::pnorm(abs(z), lower.tail = FALSE)
   else rep(NA_real_, length(est))
+  # No Wald test for eta: inference on rho uses the efficient score.
+  is_eta <- dsp$names == "eta"
+  z[is_eta] <- NA_real_
+  p[is_eta] <- NA_real_
   coef_tab <- cbind(
     Estimate = est, `Std. Error` = se,
     `z value` = z, `Pr(>|z|)` = p
@@ -289,6 +352,7 @@ summary.bpss <- function(object, ...) {
     wald = object$wald, grid = object$grid,
     ignorability = object$ignorability,
     components = .bpss_components(object),
+    grid_refined = isTRUE(object$control$refine_grid),
     dims = object$dims
   )
   class(out) <- "summary.bpss"
@@ -300,7 +364,7 @@ summary.bpss <- function(object, ...) {
   paste(apply(set, 1L, function(r) sprintf("[%.*f, %.*f]", digits, r[1], digits, r[2])), collapse = " U ")
 }
 
-# Section 4.2 diagnostics for each connected component of the score set:
+# Diagnostics recommended in the paper for each connected component of the score set:
 # refined endpoints (rho scale), whether the component contains the
 # unrestricted estimate or reaches a grid end, the largest relative profile
 # likelihood over its grid values and the ranges of J, J / I_etaeta and Delta.
@@ -350,9 +414,10 @@ print.summary.bpss <- function(x, digits = 4, ...) {
               x$nobs, x$n_selected))
   cat("\nCoefficients (outcome, selection, eta = atanh(rho)):\n")
   stats::printCoefmat(
-    x$coefficients, digits = digits,
-    has.Pvalue = TRUE, na.print = "NA"
+    x$coefficients, digits = digits, signif.stars = FALSE,
+    has.Pvalue = TRUE, na.print = ""
   )
+  cat("No Wald test is reported for eta; inference on rho uses the efficient score below.\n")
   cat(sprintf(
     "\nrho_hat = %.*f   eta_hat = %.*f   largest projected-gradient component = %.*g\n",
     digits, x$rho_hat, digits, x$eta_hat,
@@ -382,37 +447,35 @@ print.summary.bpss <- function(x, digits = 4, ...) {
                   x$wald$reason %||% "the unrestricted fit failed its checks"))
   }
   if (!is.null(x$grid)) {
-    cat(sprintf(
-      "%.0f%% efficient-score set (rho): %s\n",
-      100 * x$level, .fmt_set(x$grid$score_rho_set, digits = 3)
-    ))
+    tab <- x$grid$table
+    cat(sprintf("%.0f%% efficient-score set (rho): %s\n",
+                100 * x$level, .fmt_set(x$grid$score_rho_set, digits = 3)))
+    cat(sprintf("  %s.\n", .bpss_grid_note(tab, x$grid_refined)))
+    un <- .bpss_unresolved_note(tab)
+    if (!is.null(un))
+      cat(sprintf("  %s%s.\n", toupper(substr(un, 1L, 1L)), substring(un, 2L)))
     if (isTRUE(x$grid$edge))
-      cat("  A component reaches a grid boundary and is reported only up to it.\n")
-    if (x$grid$n_unresolved > 0L)
-      cat(sprintf("  Statistic not computed at %d grid value(s), rho in %s.\n",
-                  x$grid$n_unresolved,
-                  .fmt_set(x$grid$unresolved_rho_ranges, digits = 3)))
+      cat("  A component reaches an end of the grid and is reported only up to it.\n")
     if (x$grid$n_branch_ambiguous > 0L)
       cat(sprintf("  %d grid value(s) with distinct nuisance fits of equal likelihood.\n",
                   x$grid$n_branch_ambiguous))
     if (isTRUE(x$grid$profile_reference_dominated))
       cat("  A constrained fit exceeds the unrestricted reference; the profile likelihood is not reported.\n")
-    if (!is.null(x$components) && nrow(x$components)) {
-      cat("\nScore-set components (diagnostics over evaluated grid values):\n")
-      cm <- x$components
-      show <- data.frame(
-        lower = sprintf("%.3f", cm$lower), upper = sprintf("%.3f", cm$upper),
-        estimate = ifelse(cm$contains_estimate, "yes", "no"),
-        boundary = ifelse(cm$reaches_boundary, "yes", "no"),
-        max_R = ifelse(is.finite(cm$max_R), formatC(cm$max_R, digits = 3, format = "g"), "NA"),
-        J = sprintf("[%s, %s]", formatC(cm$J_min, digits = 3, format = "g"),
-                    formatC(cm$J_max, digits = 3, format = "g")),
-        J_ratio = sprintf("[%s, %s]", formatC(cm$J_ratio_min, digits = 3, format = "g"),
-                          formatC(cm$J_ratio_max, digits = 3, format = "g")),
-        Delta = sprintf("[%s, %s]", formatC(cm$Delta_min, digits = 3, format = "g"),
-                        formatC(cm$Delta_max, digits = 3, format = "g"))
-      )
-      print(show, row.names = FALSE)
+    cm <- x$components
+    if (!is.null(cm) && nrow(cm)) {
+      cat("\nComponents of the score set (over their evaluated grid values):\n")
+      for (k in seq_len(nrow(cm))) {
+        flags <- c(if (isTRUE(cm$contains_estimate[k])) "contains the estimate",
+                   if (isTRUE(cm$reaches_boundary[k])) "reaches an end of the grid")
+        cat(sprintf("  [%.3f, %.3f]%s\n", cm$lower[k], cm$upper[k],
+                    if (length(flags)) paste0(": ", paste(flags, collapse = "; ")) else ""))
+        cat(sprintf("    largest relative profile likelihood %s\n",
+                    if (is.finite(cm$max_R[k])) .fmt3(cm$max_R[k]) else "not available"))
+        cat(sprintf("    J_n %s to %s; J_n / I_etaeta,n %s to %s; Delta_n %s to %s\n",
+                    .fmt3(cm$J_min[k]), .fmt3(cm$J_max[k]),
+                    .fmt3(cm$J_ratio_min[k]), .fmt3(cm$J_ratio_max[k]),
+                    .fmt3(cm$Delta_min[k]), .fmt3(cm$Delta_max[k])))
+      }
     }
   }
 
@@ -424,6 +487,8 @@ print.summary.bpss <- function(x, digits = 4, ...) {
     ))
     if (isTRUE(ig$lr_usable))
       cat(sprintf("; LR = %.3f, p = %.4f", ig$LR, ig$p_lr))
+    else
+      cat("; LR not computed")
     cat(sprintf(
       "\n  J_n(0) = %.*f; J_n(0) / I_etaeta,n(0) = %.*g; Delta_n(0) = %.*g\n",
       digits, ig$J, max(digits, 4L),
@@ -495,19 +560,22 @@ print.bpss_decomp <- function(x, digits = 4, ...) {
   cat(sprintf("  baseline K0 = %.5g; exclusion term gamma_V^2 K1 = %.5g; cross term 2 gamma_V K01 = %.5g\n",
               x$K0, x$exclusion_term, x$cross_term))
   if (is.finite(x$kappa)) {
-    reg <- if (x$kappa > 0) "the exclusion reinforces baseline information"
-           else if (x$kappa < 0) "the exclusion offsets baseline information"
-           else "no cross term"
-    cat(sprintf("  kappa = %.4f (%s)   omega = %.4g\n", x$kappa, reg, x$omega))
+    sgn <- if (x$kappa > 0) "positive local cross term"
+           else if (x$kappa < 0) "negative local cross term"
+           else "zero local cross term"
+    cat(sprintf("  kappa = %.4f (%s)   omega = %.4g\n", x$kappa, sgn, x$omega))
   } else {
     cat(sprintf("  kappa and omega not reported: %s\n",
                 x$kappa_omega_undefined_reason))
   }
-  cat(sprintf("  A = %.5g   B = %.5g   J/n = %.5g\n", x$A, x$B, x$J_over_n))
+  ratio <- x$B / x$J_over_n
+  cat(sprintf("  A = %.5g   B = %.5g   J/n = %.5g   B/(J/n) = %s\n",
+              x$A, x$B, x$J_over_n, .fmt3(ratio)))
   cat(sprintf("  J/I_etaeta = %.4g   Delta = %.3g\n",
               x$J_over_I_etaeta, x$Delta))
-  if (is.finite(x$omega) && x$omega > 5)
-    cat("  Note: omega is large; the expansion is local in gamma_V and B need not approximate J/n.\n")
+  if (is.finite(ratio) && abs(ratio - 1) > 0.1)
+    cat("  Note: B differs from J/n by more than 10%; the expansion is local in gamma_V\n",
+        "  and its leading term is not an accurate approximation at this value.\n", sep = "")
   invisible(x)
 }
 
@@ -516,10 +584,10 @@ print.bpss_decomp <- function(x, digits = 4, ...) {
 #' \code{type = "score"} plots the efficient-score p-value against the
 #' hypothesized correlation, with the nominal level as a dashed line and the
 #' confidence set shaded; \code{type = "profile"} plots the relative profile
-#' likelihood \eqn{R_n} with reference levels 1/8 and 1/32;
-#' \code{type = "information"} plots \eqn{\hat J_n / \hat I_{\eta\eta,n}} and
-#' \eqn{\hat\Delta_n} at the constrained fits. A dotted vertical line marks the
-#' unrestricted estimate.
+#' likelihood \eqn{R_n}{R} with reference levels 1/8 and 1/32;
+#' \code{type = "information"} plots \eqn{\hat J_n / \hat I_{\eta\eta,n}}{J / I_etaeta}
+#' and \eqn{\hat\Delta_n}{Delta} at the constrained fits. A dotted vertical line
+#' marks the unrestricted estimate.
 #'
 #' @param x A fitted object of class \code{"bpss"}.
 #' @param type Which plot to draw.
@@ -581,10 +649,11 @@ plot.bpss <- function(x, type = c("score", "profile", "information"), ...) {
 #' Compare dependence inference across model specifications
 #'
 #' Tabulates, for several fitted specifications, the unrestricted estimate of
-#' \eqn{\rho}, the Wald interval, the efficient-score confidence set and the
-#' diagnostics of the test of \eqn{\rho = 0} (\eqn{\hat J_n(0)},
-#' \eqn{\hat J_n(0) / \hat I_{\eta\eta,n}(0)}, \eqn{\hat\Delta_n(0)} and the
-#' score and likelihood-ratio p-values), as in Table 3 of the paper.
+#' \eqn{\rho}{rho}, the Wald interval, the efficient-score confidence set and
+#' the diagnostics of the test of \eqn{\rho = 0}{rho = 0}
+#' (\eqn{\hat J_n(0)}{J(0)}, \eqn{\hat J_n(0) / \hat I_{\eta\eta,n}(0)}{J(0) / I_etaeta(0)},
+#' \eqn{\hat\Delta_n(0)}{Delta(0)} and the score and likelihood-ratio
+#' p-values), as in the application in the paper.
 #'
 #' @param fits A named list of fitted \code{"bpss"} objects.
 #' @param digits Number of decimals for the reported sets.

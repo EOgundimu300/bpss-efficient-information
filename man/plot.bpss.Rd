@@ -20,8 +20,8 @@
 \code{type = "score"} plots the efficient-score p-value against the
 hypothesized correlation, with the nominal level as a dashed line and the
 confidence set shaded; \code{type = "profile"} plots the relative profile
-likelihood \eqn{R_n} with reference levels 1/8 and 1/32;
-\code{type = "information"} plots \eqn{\hat J_n / \hat I_{\eta\eta,n}} and
-\eqn{\hat\Delta_n} at the constrained fits. A dotted vertical line marks the
-unrestricted estimate.
+likelihood \eqn{R_n}{R} with reference levels 1/8 and 1/32;
+\code{type = "information"} plots \eqn{\hat J_n / \hat I_{\eta\eta,n}}{J / I_etaeta}
+and \eqn{\hat\Delta_n}{Delta} at the constrained fits. A dotted vertical line
+marks the unrestricted estimate.
 }

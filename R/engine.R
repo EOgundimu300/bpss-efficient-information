@@ -473,7 +473,7 @@ bpss_efficient_score_stat <- function(theta, XS, XO, D,
   D <- as.matrix(D)
   if (!all(dim(D) == dim(prob))) stop("D has incompatible dimensions.")
   if (isTRUE(info$probability_floor_hit))
-    stop("a fitted cell probability is below eps.")
+    stop(sprintf("a fitted cell probability is below %g", eps))
   if (any(prob <= 0)) stop("zero fitted cell probability.")
 
   raw_s <- G / prob
@@ -496,31 +496,36 @@ bpss_efficient_score_stat <- function(theta, XS, XO, D,
 #' Efficient information for the dependence parameter
 #'
 #' Computes, at specified coefficients and correlation, the expected
-#' information \eqn{I_n} and the efficient information
-#' \deqn{J_n = I_{\eta\eta,n} - I_{\eta\psi,n} I_{\psi\psi,n}^{-1} I_{\psi\eta,n}}
-#' for \eqn{\eta = \mathrm{atanh}(\rho)}, together with the retained fraction
-#' \eqn{J_n / I_{\eta\eta,n}} and \eqn{\Delta_n}, the largest proportion of
-#' \eqn{J_n} contributed by a single observation.
+#' information and the efficient information
+#' \deqn{J_n = I_{\eta\eta,n} - I_{\eta\psi,n} I_{\psi\psi,n}^{-1} I_{\psi\eta,n}}{J = I_etaeta - I_etapsi I_psipsi^(-1) I_psieta}
+#' for \eqn{\eta = \mathrm{atanh}(\rho)}{eta = atanh(rho)}, with \eqn{\psi}{psi}
+#' the regression coefficients. Also returned are the retained fraction
+#' \eqn{J_n / I_{\eta\eta,n}}{J / I_etaeta} and \eqn{\Delta_n}{Delta}, the largest
+#' proportion of \eqn{J_n}{J} contributed by a single observation.
 #'
 #' @param beta Outcome coefficients, one per column of \code{XO}.
 #' @param gamma Selection coefficients, one per column of \code{XS}.
-#' @param rho Correlation, a single value in \eqn{(-1, 1)}.
+#' @param rho Correlation, a single value in \eqn{(-1, 1)}{(-1, 1)}.
 #' @param XO Outcome design matrix, including the intercept column.
-#' @param XS Selection design matrix, including the intercept column; the
-#'   rows correspond to those of \code{XO}.
+#' @param XS Selection design matrix, including the intercept column; its rows
+#'   correspond to those of \code{XO}.
 #' @param eps Smallest admissible cell probability. The information is not
-#'   computed if any cell probability is below \code{eps}.
+#'   computed if any cell probability is below \code{eps}. Set \code{eps = 0} to
+#'   compute it with the exact probabilities, for example at parameter values
+#'   where some cell probabilities are smaller than \eqn{10^{-12}}{1e-12}.
 #' @param rcond_tol Smallest admissible reciprocal condition number of the
-#'   nuisance information \eqn{I_{\psi\psi,n}}.
+#'   nuisance information \eqn{I_{\psi\psi,n}}{I_psipsi}.
 #'
 #' @return A list with components \code{J} (efficient information for
-#'   \eqn{\eta}), \code{J_rho} (\eqn{J_n / (1 - \rho^2)^2}, the efficient
-#'   information for \eqn{\rho}), \code{I_etaeta}, \code{J_over_I_etaeta},
-#'   \code{Delta}, \code{contributions} (the \eqn{j_{i,n}}), \code{I} (the full
-#'   expected information, ordered as selection coefficients, outcome
-#'   coefficients, \eqn{\eta}), \code{M} (\eqn{I_{\psi\psi,n}^{-1}
-#'   I_{\psi\eta,n}}), \code{residual_gradient} (the \eqn{n \times 3} matrix of
-#'   \eqn{g_{i,n}}), \code{min_cell_probability} and \code{rcond_psipsi}.
+#'   \eqn{\eta}{eta}), \code{J_rho} (\eqn{J_n / (1 - \rho^2)^2}{J / (1 - rho^2)^2},
+#'   the efficient information for \eqn{\rho}{rho}), \code{I_etaeta},
+#'   \code{J_over_I_etaeta}, \code{Delta}, \code{contributions} (the
+#'   per-observation contributions to \eqn{J_n}{J}), \code{I} (the full expected
+#'   information, ordered as selection coefficients, outcome coefficients,
+#'   \eqn{\eta}{eta}), \code{M} (\eqn{I_{\psi\psi,n}^{-1} I_{\psi\eta,n}}{I_psipsi^(-1) I_psieta}),
+#'   \code{residual_gradient} (the \eqn{n \times 3}{n x 3} matrix of residual
+#'   cell-probability gradients), \code{min_cell_probability} and
+#'   \code{rcond_psipsi}.
 #'
 #' @examples
 #' n <- 500
@@ -539,7 +544,7 @@ bpss_information <- function(beta, gamma, rho, XO, XS, eps = 1e-12,
   info <- bpss_info_compact(theta, XS, XO, eps = eps, rcond_tol = rcond_tol)
   if (isTRUE(info$probability_floor_hit))
     stop("a cell probability is below eps = ", format(eps),
-         "; the information is not computed.")
+         "; set eps = 0 to compute the information with the exact probabilities.")
   list(J = info$J, J_rho = info$J / (1 - rho^2)^2,
        I_etaeta = info$I_etaeta, J_over_I_etaeta = info$J / info$I_etaeta,
        Delta = info$Delta, contributions = info$v, I = info$I, M = info$M,

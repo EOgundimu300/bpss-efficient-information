@@ -10,7 +10,7 @@ test_ignorability(object, require_audited_lr = TRUE)
 \item{object}{A fitted object of class \code{"bpss"}.}
 
 \item{require_audited_lr}{Logical; compute the likelihood-ratio statistic
-only when the unrestricted reference fit passed the multi-start audit.}
+only when the unrestricted reference fit passed the multi-start search.}
 }
 \value{
 A list with components \code{ok}, \code{status}, \code{U},
@@ -19,10 +19,10 @@ A list with components \code{ok}, \code{status}, \code{U},
   the null fit.
 }
 \description{
-Efficient-score test of \eqn{\rho = 0}. At \eqn{\eta = 0} the constrained
-fit separates into a selection probit on all units and an outcome probit on
-the selected units. The efficient score is evaluated at that fit, with the
-expected efficient information \eqn{\hat J_n(0)} as its variance. The
-likelihood-ratio statistic against the audited unrestricted fit is reported
-for comparison.
+Efficient-score test of \eqn{\rho = 0}{rho = 0}. At \eqn{\eta = 0}{eta = 0}
+the constrained likelihood separates into a selection probit on all units and
+an outcome probit on the selected units. The efficient score is evaluated at
+that fit, with the expected efficient information
+\eqn{\hat J_n(0)}{J(0)} as its variance. The likelihood-ratio statistic
+against the multi-start unrestricted fit is reported for comparison.
 }

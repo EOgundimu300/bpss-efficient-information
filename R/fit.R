@@ -369,6 +369,9 @@ bpss_fit_constrained <- function(eta_star, D, XS, XO,
     else "ok"
 
   info_obj <- if (!is.null(stat)) stat$info else NULL
+  # Smallest fitted cell probability, also when the statistic was not computed.
+  min_prob <- if (!is.null(info_obj)) info_obj$min_cell_probability else
+    tryCatch(min(bpss_cell_prob(theta_hat, XS, XO)), error = function(e) NA_real_)
   list(
     ok = ok, optim_ok = optim_ok, likelihood_ok = likelihood_ok,
     info_ok = stat_ok, score_ok = stat_ok,
@@ -387,10 +390,10 @@ bpss_fit_constrained <- function(eta_star, D, XS, XO,
     T_score = if (!is.null(stat)) stat$T_score else NA_real_,
     Delta = if (!is.null(stat)) stat$Delta else NA_real_,
     rcond_psipsi = if (!is.null(info_obj)) info_obj$rcond_psipsi else NA_real_,
-    min_cell_probability = if (!is.null(info_obj))
-      info_obj$min_cell_probability else NA_real_,
+    min_cell_probability = min_prob,
     probability_floor_hit = if (!is.null(info_obj))
-      info_obj$probability_floor_hit else NA,
+      info_obj$probability_floor_hit else if (is.finite(min_prob))
+      min_prob < eps else NA,
     boundary_hit = bnd$boundary_hit,
     eta_boundary_hit = FALSE,
     coef_boundary_hit = bnd$coef_boundary_hit,

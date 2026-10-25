@@ -22,8 +22,8 @@ by default the data used in the fit.}
 
 \item{type}{\code{"cell"} for the probabilities of the three observed cells
 (S = 0; S = 1, Y = 0; S = 1, Y = 1), \code{"selection"} for
-\eqn{\mathrm{pr}(S = 1)}, or \code{"conditional"} for
-\eqn{\mathrm{pr}(Y = 1 \mid S = 1)}.}
+\eqn{\mathrm{pr}(S = 1)}{pr(S = 1)}, or \code{"conditional"} for
+\eqn{\mathrm{pr}(Y = 1 \mid S = 1)}{pr(Y = 1 | S = 1)}.}
 
 \item{...}{Ignored.}
 }

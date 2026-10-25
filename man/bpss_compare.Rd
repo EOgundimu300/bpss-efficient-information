@@ -16,8 +16,9 @@ A data frame with one row per specification.
 }
 \description{
 Tabulates, for several fitted specifications, the unrestricted estimate of
-\eqn{\rho}, the Wald interval, the efficient-score confidence set and the
-diagnostics of the test of \eqn{\rho = 0} (\eqn{\hat J_n(0)},
-\eqn{\hat J_n(0) / \hat I_{\eta\eta,n}(0)}, \eqn{\hat\Delta_n(0)} and the
-score and likelihood-ratio p-values), as in Table 3 of the paper.
+\eqn{\rho}{rho}, the Wald interval, the efficient-score confidence set and
+the diagnostics of the test of \eqn{\rho = 0}{rho = 0}
+(\eqn{\hat J_n(0)}{J(0)}, \eqn{\hat J_n(0) / \hat I_{\eta\eta,n}(0)}{J(0) / I_etaeta(0)},
+\eqn{\hat\Delta_n(0)}{Delta(0)} and the score and likelihood-ratio
+p-values), as in the application in the paper.
 }

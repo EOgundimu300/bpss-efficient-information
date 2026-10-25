@@ -524,18 +524,19 @@ bpss_score_curve <- function(object) {
 #' Relative profile likelihood on the inversion grid
 #'
 #' Returns the relative profile likelihood
-#' \eqn{R_n(\eta^\star) = \exp\{\ell_n^p(\eta^\star) - \sup_\eta \ell_n^p(\eta)\}}
-#' at the grid values of a fitted \code{"bpss"} object, with the audited
-#' unrestricted fit as the reference, and the sets on which \eqn{R_n} is at
-#' least each of \code{levels}.
+#' \eqn{R_n(\eta^\star) = \exp\{\ell_n^p(\eta^\star) - \sup_\eta \ell_n^p(\eta)\}}{R(eta*) = exp{lp(eta*) - sup lp(eta)}}
+#' at the grid values of a fitted \code{"bpss"} object, where
+#' \eqn{\ell_n^p}{lp} is the profile log-likelihood and the multi-start
+#' unrestricted fit is the reference, together with the sets on which
+#' \eqn{R_n}{R} is at least each of \code{levels}.
 #'
 #' @param object A fitted object of class \code{"bpss"}.
 #' @param levels Relative-likelihood levels defining the reported sets.
 #'
 #' @return A list with \code{curve}, a data frame with columns \code{eta},
-#'   \code{rho}, \code{LR} (\eqn{-2 \log R_n}) and \code{R} (\eqn{R_n}),
-#'   \code{levels}, and \code{rho_sets}, the grid-resolution sets on the
-#'   correlation scale.
+#'   \code{rho}, \code{LR} (\eqn{-2\log R_n}{-2 log R}) and \code{R}
+#'   (\eqn{R_n}{R}), \code{levels}, and \code{rho_sets}, the sets on the
+#'   correlation scale at grid resolution.
 #' @seealso \code{\link{bpss}}, \code{\link{plot.bpss}}
 #' @export
 bpss_profile <- function(object, levels = c(1/8, 1/32)) {
@@ -558,16 +559,16 @@ bpss_profile <- function(object, levels = c(1/8, 1/32)) {
 
 #' Test of ignorable selection
 #'
-#' Efficient-score test of \eqn{\rho = 0}. At \eqn{\eta = 0} the constrained
-#' fit separates into a selection probit on all units and an outcome probit on
-#' the selected units. The efficient score is evaluated at that fit, with the
-#' expected efficient information \eqn{\hat J_n(0)} as its variance. The
-#' likelihood-ratio statistic against the audited unrestricted fit is reported
-#' for comparison.
+#' Efficient-score test of \eqn{\rho = 0}{rho = 0}. At \eqn{\eta = 0}{eta = 0}
+#' the constrained likelihood separates into a selection probit on all units and
+#' an outcome probit on the selected units. The efficient score is evaluated at
+#' that fit, with the expected efficient information
+#' \eqn{\hat J_n(0)}{J(0)} as its variance. The likelihood-ratio statistic
+#' against the multi-start unrestricted fit is reported for comparison.
 #'
 #' @param object A fitted object of class \code{"bpss"}.
 #' @param require_audited_lr Logical; compute the likelihood-ratio statistic
-#'   only when the unrestricted reference fit passed the multi-start audit.
+#'   only when the unrestricted reference fit passed the multi-start search.
 #'
 #' @return A list with components \code{ok}, \code{status}, \code{U},
 #'   \code{J}, \code{I_etaeta}, \code{J_over_I_etaeta}, \code{Delta},
@@ -642,22 +643,24 @@ test_ignorability <- function(object, require_audited_lr = TRUE) {
 
 #' Efficient-score test at specified correlations
 #'
-#' Computes the statistic \eqn{T_n(\eta^\star) = \hat U_n(\eta^\star)^2 /
-#' \hat J_n(\eta^\star)} at each hypothesized correlation
-#' \eqn{\rho^\star = \tanh(\eta^\star)}, where \eqn{\hat U_n} is the efficient
-#' score and \eqn{\hat J_n} the expected efficient information, both evaluated
-#' at the nuisance coefficients maximizing the likelihood with \eqn{\eta}
-#' fixed at \eqn{\eta^\star}. The p-value is \eqn{1 - F_{\chi^2_1}(T_n)}.
+#' Computes
+#' \eqn{T_n(\eta^\star) = \hat U_n(\eta^\star)^2 / \hat J_n(\eta^\star)}{T(eta*) = U(eta*)^2 / J(eta*)}
+#' at each hypothesized correlation \eqn{\rho^\star = \tanh(\eta^\star)}{rho* = tanh(eta*)},
+#' where \eqn{\hat U_n}{U} is the efficient score and \eqn{\hat J_n}{J} the
+#' expected efficient information, both evaluated at the regression
+#' coefficients that maximize the likelihood with \eqn{\eta}{eta} fixed at
+#' \eqn{\eta^\star}{eta*}. The p-value is computed from the
+#' \eqn{\chi^2_1}{chi-squared(1)} distribution.
 #'
-#' The constrained fit is started from the unrestricted nuisance estimate, from
-#' separate selection and selected-outcome probit fits and, when it differs,
-#' from the single-start unrestricted fit; the fit with the largest
-#' log-likelihood is used. The statistic is not computed if this fit fails
-#' its convergence, stationarity, cell-probability or nuisance-information
-#' checks, or if a regression coefficient is near its bound.
+#' The constrained fit is started from the unrestricted estimate, from separate
+#' selection and selected-outcome probit fits and, when it differs, from the
+#' single-start unrestricted fit; the fit with the largest log-likelihood is
+#' used. The statistic is not computed if this fit fails its convergence,
+#' stationarity, cell-probability or nuisance-information checks, or if a
+#' regression coefficient is near its bound.
 #'
 #' @param object A fitted object of class \code{"bpss"}.
-#' @param rho Hypothesized correlations in \eqn{(-1, 1)}.
+#' @param rho Hypothesized correlations in \eqn{(-1, 1)}{(-1, 1)}.
 #'
 #' @return A data frame with one row per value of \code{rho}, giving
 #'   \code{T}, \code{p_value}, the efficient score \code{U}, \code{J},

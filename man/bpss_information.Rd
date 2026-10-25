@@ -11,36 +11,41 @@ bpss_information(beta, gamma, rho, XO, XS, eps = 1e-12, rcond_tol = 1e-12)
 
 \item{gamma}{Selection coefficients, one per column of \code{XS}.}
 
-\item{rho}{Correlation, a single value in \eqn{(-1, 1)}.}
+\item{rho}{Correlation, a single value in \eqn{(-1, 1)}{(-1, 1)}.}
 
 \item{XO}{Outcome design matrix, including the intercept column.}
 
-\item{XS}{Selection design matrix, including the intercept column; the
-rows correspond to those of \code{XO}.}
+\item{XS}{Selection design matrix, including the intercept column; its rows
+correspond to those of \code{XO}.}
 
 \item{eps}{Smallest admissible cell probability. The information is not
-computed if any cell probability is below \code{eps}.}
+computed if any cell probability is below \code{eps}. Set \code{eps = 0} to
+compute it with the exact probabilities, for example at parameter values
+where some cell probabilities are smaller than \eqn{10^{-12}}{1e-12}.}
 
 \item{rcond_tol}{Smallest admissible reciprocal condition number of the
-nuisance information \eqn{I_{\psi\psi,n}}.}
+nuisance information \eqn{I_{\psi\psi,n}}{I_psipsi}.}
 }
 \value{
 A list with components \code{J} (efficient information for
-  \eqn{\eta}), \code{J_rho} (\eqn{J_n / (1 - \rho^2)^2}, the efficient
-  information for \eqn{\rho}), \code{I_etaeta}, \code{J_over_I_etaeta},
-  \code{Delta}, \code{contributions} (the \eqn{j_{i,n}}), \code{I} (the full
-  expected information, ordered as selection coefficients, outcome
-  coefficients, \eqn{\eta}), \code{M} (\eqn{I_{\psi\psi,n}^{-1}
-  I_{\psi\eta,n}}), \code{residual_gradient} (the \eqn{n \times 3} matrix of
-  \eqn{g_{i,n}}), \code{min_cell_probability} and \code{rcond_psipsi}.
+  \eqn{\eta}{eta}), \code{J_rho} (\eqn{J_n / (1 - \rho^2)^2}{J / (1 - rho^2)^2},
+  the efficient information for \eqn{\rho}{rho}), \code{I_etaeta},
+  \code{J_over_I_etaeta}, \code{Delta}, \code{contributions} (the
+  per-observation contributions to \eqn{J_n}{J}), \code{I} (the full expected
+  information, ordered as selection coefficients, outcome coefficients,
+  \eqn{\eta}{eta}), \code{M} (\eqn{I_{\psi\psi,n}^{-1} I_{\psi\eta,n}}{I_psipsi^(-1) I_psieta}),
+  \code{residual_gradient} (the \eqn{n \times 3}{n x 3} matrix of residual
+  cell-probability gradients), \code{min_cell_probability} and
+  \code{rcond_psipsi}.
 }
 \description{
 Computes, at specified coefficients and correlation, the expected
-information \eqn{I_n} and the efficient information
-\deqn{J_n = I_{\eta\eta,n} - I_{\eta\psi,n} I_{\psi\psi,n}^{-1} I_{\psi\eta,n}}
-for \eqn{\eta = \mathrm{atanh}(\rho)}, together with the retained fraction
-\eqn{J_n / I_{\eta\eta,n}} and \eqn{\Delta_n}, the largest proportion of
-\eqn{J_n} contributed by a single observation.
+information and the efficient information
+\deqn{J_n = I_{\eta\eta,n} - I_{\eta\psi,n} I_{\psi\psi,n}^{-1} I_{\psi\eta,n}}{J = I_etaeta - I_etapsi I_psipsi^(-1) I_psieta}
+for \eqn{\eta = \mathrm{atanh}(\rho)}{eta = atanh(rho)}, with \eqn{\psi}{psi}
+the regression coefficients. Also returned are the retained fraction
+\eqn{J_n / I_{\eta\eta,n}}{J / I_etaeta} and \eqn{\Delta_n}{Delta}, the largest
+proportion of \eqn{J_n}{J} contributed by a single observation.
 }
 \examples{
 n <- 500

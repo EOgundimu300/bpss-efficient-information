@@ -30,10 +30,12 @@ An object of class \code{"bpss_set"}: a data frame with columns
 }
 \description{
 Efficient-score confidence set (the default) or Wald interval for
-\eqn{\rho} or \eqn{\eta = \mathrm{atanh}(\rho)}.
+\eqn{\rho}{rho} or \eqn{\eta = \mathrm{atanh}(\rho)}{eta = atanh(rho)}.
 }
 \details{
 At the level used in the fit, the score set is the stored set with refined
 endpoints. At another level it is recomputed from the stored grid values,
-with endpoints at grid resolution.
+with endpoints at grid resolution. The printed notes give the grid, any grid
+values at which the statistic was not computed, and whether a component
+reaches an end of the grid.
 }

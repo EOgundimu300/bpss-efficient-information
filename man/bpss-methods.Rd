@@ -44,15 +44,20 @@ confidence set or decomposition, as appropriate).}
 \description{
 Printing, summary and extractor methods for objects returned by
 \code{\link{bpss}}. Coefficients are displayed in the order outcome
-(\eqn{\beta}), selection (\eqn{\gamma}), \eqn{\eta = \mathrm{atanh}(\rho)}.
-Standard errors use the inverse expected information at the unrestricted
-estimate; z statistics and p-values are reported only when the Wald
-interval is computed (see \code{\link{bpss}}).
+(\eqn{\beta}{beta}), selection (\eqn{\gamma}{gamma}),
+\eqn{\eta = \mathrm{atanh}(\rho)}{eta = atanh(rho)}. Standard errors use the
+inverse expected information at the unrestricted estimate. z statistics and
+p-values for the regression coefficients are reported only when the Wald
+interval is computed (see \code{\link{bpss}}); none is reported for
+\eqn{\eta}{eta}, for which the efficient-score results should be used.
 }
 \details{
-\code{summary()} also reports, for each connected component of the score
-confidence set, whether it contains the unrestricted estimate or reaches a
-grid boundary, the largest relative profile likelihood over its evaluated
-grid values, and the ranges of \eqn{\hat J_n}, \eqn{\hat J_n / \hat
-I_{\eta\eta,n}} and \eqn{\hat\Delta_n} there (Section 4.2 of the paper).
+\code{summary()} reports the efficient-score confidence set with the grid on
+which it was computed and any grid values at which the statistic was not
+computed. For each connected component of the set it also reports whether
+the component contains the unrestricted estimate or reaches an end of the
+grid, the largest relative profile likelihood over its evaluated grid
+values, and the ranges of \eqn{\hat J_n}{J},
+\eqn{\hat J_n / \hat I_{\eta\eta,n}}{J / I_etaeta} and
+\eqn{\hat\Delta_n}{Delta} there, as recommended in the paper.
 }

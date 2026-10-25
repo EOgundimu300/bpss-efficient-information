@@ -45,8 +45,8 @@ nuisance information.}
 \item{coef_bound}{Bound on the absolute value of each regression
 coefficient during optimization.}
 
-\item{eta_bound}{Bound on \eqn{|\eta|}; the default corresponds to
-\eqn{|\rho| \le 0.995}.}
+\item{eta_bound}{Bound on \eqn{|\eta|}{|eta|}; the default corresponds to
+\eqn{|\rho| \le 0.995}{|rho| <= 0.995}.}
 
 \item{maxit, optim_factr, optim_pgtol}{Settings of the first L-BFGS-B run; a
 failed or nonstationary run is retried with \code{2 * maxit} iterations
@@ -59,10 +59,10 @@ component of the negative average log-likelihood.}
 absolute value is at least this fraction of the bound.}
 
 \item{grid_length, grid_rho}{Number and range of equally spaced values of
-\eqn{\rho} in the inversion grid.}
+\eqn{\rho}{rho} in the inversion grid.}
 
 \item{refine_grid, refine_tol}{Refine set endpoints at changes in the
-decision, with this root-finding tolerance on the \eqn{\eta} scale.}
+decision, with this root-finding tolerance on the \eqn{\eta}{eta} scale.}
 
 \item{do_grid}{Logical; invert the score test on the grid.}
 
@@ -81,7 +81,7 @@ different when they differ by more than
 \code{max(audit_ll_tol, audit_ll_rel_tol * max(1, |logLik|))}.}
 
 \item{audit_rho_tol, audit_eta_se_tol}{Thresholds on differences in
-\eqn{\hat\rho}, and in \eqn{\hat\eta} in standard-error units, that
+\eqn{\hat\rho}{rho-hat}, and in \eqn{\hat\eta}{eta-hat} in standard-error units, that
 trigger the remaining starts and the discordance flags.}
 
 \item{audit_top_starts}{Number of constrained fits with the largest
@@ -102,9 +102,9 @@ log-likelihoods are flagged as distinct.}
 \item{require_audited_profile}{Logical; compute likelihood-ratio
 statistics only against an audited unrestricted fit.}
 
-\item{profile_lr_tol}{A constrained fit whose log-likelihood exceeds the
-reference by more than half this value invalidates the profile (the
-threshold is on the \eqn{2\log}-likelihood scale).}
+\item{profile_lr_tol}{A constrained fit whose log-likelihood exceeds that of
+the reference fit by more than half this value invalidates the profile
+likelihood.}
 }
 \value{
 A list of control values.

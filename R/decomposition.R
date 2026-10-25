@@ -1,4 +1,4 @@
-# Local exclusion decomposition (Section 3.2 of the paper). With the excluded
+# Local exclusion decomposition of the efficient information. With the excluded
 # covariate residualized on the outcome covariates, the residual gradient along
 # the exclusion path is g(gamma_V) = g(0) + gamma_V h + r, where h is the
 # analytic path derivative at gamma_V = 0. With n^{-1}-normalized norms in the
@@ -16,7 +16,7 @@ weighted_gradient_inner <- function(G1, G2, prob_w) {
 }
 
 # Analytic derivative h of the residual gradient along the exclusion path at
-# gamma_V = 0 (expression (S1) of the Supplementary Material).
+# gamma_V = 0, as derived in the Supplementary Material of the paper.
 bpss_residualized_gradient_derivative <- function(theta0, XS, XO, idx_V,
                                                   eps = 1e-12,
                                                   rcond_tol = 1e-12) {
@@ -273,46 +273,57 @@ bpss_decomp_theta <- function(
 
 #' Local exclusion decomposition of the efficient information
 #'
-#' Evaluates the components of the local expansion in Section 3.2 of the paper
-#' for one excluded covariate \eqn{V}. In the least-squares residualized
-#' coordinates, the residual gradient along the exclusion path is expanded at
-#' \eqn{\gamma_V = 0}. With norms in the information inner product at the
-#' evaluation point and normalized by \eqn{n}, \eqn{K_{0,n}} is the squared norm
-#' of the baseline gradient, \eqn{K_{1,n}} that of the path derivative and
-#' \eqn{K_{01,n}} their inner product. Then \eqn{A_n = K_{0,n} + \gamma_V^2
-#' K_{1,n}}, \eqn{B_n = A_n + 2 \gamma_V K_{01,n}}, and \eqn{\kappa_n} and
-#' \eqn{\omega_n} are as defined in Section S4.2. The expansion is local in
-#' \eqn{\gamma_V}: \eqn{B_n} need not approximate \eqn{J_n/n} when
-#' \eqn{\gamma_V} is not small.
+#' Evaluates the components of the local expansion of the efficient
+#' information in the coefficient \eqn{\gamma_V}{gamma_V} of one excluded
+#' covariate \eqn{V}{V}, as derived in the paper.
+#'
+#' In coordinates where the excluded covariate is replaced by its residual from
+#' a least-squares regression on the outcome covariates, the residual gradient
+#' of the cell probabilities is expanded about \eqn{\gamma_V = 0}{gamma_V = 0}.
+#' With squared norms and inner products taken in the information metric at the
+#' evaluation point and divided by \eqn{n}{n}, \eqn{K_{0,n}}{K0} is the squared
+#' norm of the baseline gradient, \eqn{K_{1,n}}{K1} that of its derivative along
+#' the exclusion path, and \eqn{K_{01,n}}{K01} their inner product. Then
+#' \eqn{A_n = K_{0,n} + \gamma_V^2 K_{1,n}}{A = K0 + gamma_V^2 K1} and
+#' \eqn{B_n = A_n + 2\gamma_V K_{01,n}}{B = A + 2 gamma_V K01}, with the cosine
+#' \eqn{\kappa_n = K_{01,n} / (K_{0,n} K_{1,n})^{1/2}}{kappa = K01 / (K0 K1)^(1/2)}
+#' (signed so that it is positive when the cross term \eqn{2\gamma_V K_{01,n}}{2 gamma_V K01}
+#' is positive) and \eqn{\omega_n = |\gamma_V| (K_{1,n} / K_{0,n})^{1/2}}{omega = |gamma_V| (K1 / K0)^(1/2)}.
+#'
+#' The expansion is local in \eqn{\gamma_V}{gamma_V}: \eqn{B_n}{B} approximates
+#' \eqn{J_n / n}{J / n} when \eqn{\gamma_V}{gamma_V} is small but need not do so
+#' otherwise, and the printed ratio \eqn{B_n / (J_n / n)}{B / (J / n)} shows how
+#' close the approximation is at the evaluation point. The sign of the cross
+#' term describes the leading local approximation only.
 #'
 #' \code{bpss_decompose()} evaluates the decomposition at the unrestricted
-#' estimate (\code{at = "mle"}) or at the constrained fit under \eqn{\rho = 0}
-#' (\code{at = "null"}) of a fitted model. \code{bpss_decomposition()}
-#' evaluates it at supplied coefficients and design matrices, as in the
-#' design-level calculations of the paper.
+#' estimate (\code{at = "mle"}) or at the constrained fit under
+#' \eqn{\rho = 0}{rho = 0} (\code{at = "null"}) of a fitted model.
+#' \code{bpss_decomposition()} evaluates it at supplied coefficients and design
+#' matrices, as in the design-level calculations of the paper.
 #'
 #' @param object A fitted object of class \code{"bpss"}.
-#' @param exclusion Name of the excluded selection covariate (a column of the
-#'   selection design matrix that is not in the outcome equation). For
+#' @param exclusion Name of the excluded covariate: a column of the selection
+#'   design matrix that is not in the outcome equation. For
 #'   \code{bpss_decompose()} it may be omitted when exactly one covariate is
 #'   excluded; for \code{bpss_decomposition()} it may also be a column index of
 #'   \code{XS}.
 #' @param at Where to evaluate the decomposition for a fitted model.
-#' @param residualize Logical; work in the residualized coordinates of the
-#'   paper. Requires every outcome column to appear in the selection design.
-#' @param K0_tol \eqn{\kappa_n} and \eqn{\omega_n} are not reported when
-#'   \eqn{K_{0,n}} does not exceed this value.
+#' @param residualize Logical; use the residualized coordinates of the paper.
+#'   Requires every outcome column to appear in the selection design.
+#' @param K0_tol \eqn{\kappa_n}{kappa} and \eqn{\omega_n}{omega} are not reported
+#'   when \eqn{K_{0,n}}{K0} does not exceed this value.
 #' @param beta,gamma,rho,XO,XS As in \code{\link{bpss_information}}; the
 #'   matrices need column names.
 #' @param eps,rcond_tol As in \code{\link{bpss_information}}.
 #'
 #' @return An object of class \code{"bpss_decomp"}: a list with components
 #'   \code{K0}, \code{K1}, \code{K01}, \code{cross_term}
-#'   (\eqn{2\gamma_V K_{01,n}}), \code{exclusion_term}
-#'   (\eqn{\gamma_V^2 K_{1,n}}), \code{A}, \code{B}, \code{kappa},
+#'   (\eqn{2\gamma_V K_{01,n}}{2 gamma_V K01}), \code{exclusion_term}
+#'   (\eqn{\gamma_V^2 K_{1,n}}{gamma_V^2 K1}), \code{A}, \code{B}, \code{kappa},
 #'   \code{omega}, \code{J_over_n}, \code{J_over_I_etaeta}, \code{Delta},
-#'   \code{gamma_V}, \code{remainder_norm2} (squared norm of the remainder
-#'   \eqn{r_{i,n}}) and further details.
+#'   \code{gamma_V}, \code{remainder_norm2} (the squared norm of the remainder
+#'   of the expansion) and further details.
 #' @seealso \code{\link{bpss_information}}
 #' @export
 bpss_decompose <- function(object, exclusion = NULL, at = c("mle", "null"),
@@ -368,11 +379,14 @@ bpss_decompose <- function(object, exclusion = NULL, at = c("mle", "null"),
 
 #' @rdname bpss_decompose
 #' @examples
+#' ## An excluded covariate that is a nonlinear function of the shared
+#' ## covariate, with a small coefficient: the expansion is local and B is
+#' ## close to J/n; here the cross term is negative.
 #' n <- 500
 #' x <- seq(-1.5, 1.5, length.out = n)
 #' XO <- cbind("(Intercept)" = 1, x = x)
 #' XS <- cbind("(Intercept)" = 1, x = x, v = x^2 - mean(x^2))
-#' bpss_decomposition(beta = c(-0.5, 0.4), gamma = c(0.4, 0.3, 0.2),
+#' bpss_decomposition(beta = c(-0.5, 0.4), gamma = c(0.4, 0.6, 0.05),
 #'                    rho = 0.3, XO = XO, XS = XS, exclusion = "v")
 #' @export
 bpss_decomposition <- function(beta, gamma, rho, XO, XS, exclusion,
