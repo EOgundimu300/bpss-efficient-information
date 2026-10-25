@@ -1,0 +1,20 @@
+Package: bpssInfo
+Type: Package
+Title: Efficient Information and Score Inference for the Dependence Parameter in Bivariate Probit Sample Selection Models
+Version: 1.0.0
+Authors@R: person("Emmanuel O.", "Ogundimu", email = "emmanuel.ogundimu@durham.ac.uk",
+    role = c("aut", "cre"))
+Description: Bivariate probit sample selection model with inference on the
+    error correlation by inversion of the efficient score test, the regression
+    coefficients being estimated at each hypothesized correlation. Provides the
+    efficient (nuisance-adjusted) information for the Fisher-transformed
+    correlation, its local decomposition under an exclusion restriction, the
+    relative profile likelihood and single-observation diagnostics, and the
+    test of ignorable selection.
+License: GPL (>= 2)
+Encoding: UTF-8
+Depends: R (>= 4.0.0)
+Imports: stats, utils, graphics, grDevices, pbivnorm, mvtnorm
+Suggests: testthat (>= 3.0.0)
+Config/testthat/edition: 3
+RoxygenNote: 7.3.1
