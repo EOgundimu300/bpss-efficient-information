@@ -66,9 +66,10 @@ finer grid can be requested with `bpss_control(grid_length = )`. The
 efficient-score set is the primary inference on the correlation. The
 unrestricted fit uses a multi-start search, and the Wald interval centred at it
 is reported for comparison; it can be unreliable when the efficient information
-is small. The Wald interval is computed only when that fit passes its checks
-and no parameter is near its bound; the further profile-likelihood condition
-applied to Wald intervals in the simulations of the paper is not implemented.
+is small. The Wald interval is computed only when that fit passes its checks,
+no parameter is near its bound and no constrained fit has a larger
+log-likelihood; the further profile-likelihood condition applied to Wald
+intervals in the simulations of the paper is not implemented.
 
 The tests in `tests/testthat` reproduce design-level information values
 reported in the paper and check the information identities, the zero-information

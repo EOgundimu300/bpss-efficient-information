@@ -237,7 +237,7 @@ confint.bpss <- function(object, parm = c("rho", "eta"), level = NULL,
     info <- grid_intervals_with_edges(gi$table$eta, acc)
     eta_int <- info$intervals
     set <- if (parm == "rho") transform_eta_intervals_to_rho(eta_int) else eta_int
-    disc <- length(info$index_runs) > 1L
+    disc <- .bpss_resolved_runs(acc, gi$table$resolved & is.finite(curve$p)) > 1L
     edge <- isTRUE(info$touches_edge)
     unres <- sum(!(gi$table$resolved & is.finite(curve$p)))
   }
@@ -307,7 +307,7 @@ summary.bpss <- function(object, ...) {
   V <- vcov(object)
   se <- if (all(dim(V) > 0) && isTRUE(fit$info_ok))
     sqrt(diag(V)) else rep(NA_real_, length(est))
-  wald_valid <- isTRUE(fit$wald_usable)
+  wald_valid <- isTRUE(object$wald$usable)
   z <- if (wald_valid) est / se else rep(NA_real_, length(est))
   p <- if (wald_valid)
     2 * stats::pnorm(abs(z), lower.tail = FALSE)
@@ -342,7 +342,7 @@ summary.bpss <- function(object, ...) {
       if (!is.null(fit)) fit$eta_boundary_hit else NA,
     coef_boundary_hit =
       if (!is.null(fit)) fit$coef_boundary_hit else NA,
-    wald_usable = if (!is.null(fit)) fit$wald_usable else FALSE,
+    wald_usable = isTRUE(object$wald$usable),
     audit_ok = if (!is.null(fit)) fit$audit_ok %||% NA else NA,
     default_discordance =
       if (!is.null(fit)) fit$default_discordance %||% NA else NA,

@@ -10,7 +10,8 @@ test_ignorability(object, require_audited_lr = TRUE)
 \item{object}{A fitted object of class \code{"bpss"}.}
 
 \item{require_audited_lr}{Logical; compute the likelihood-ratio statistic
-only when the unrestricted reference fit passed the multi-start search.}
+only when the unrestricted reference fit passed the multi-start search and
+no constrained fit has a larger log-likelihood.}
 }
 \value{
 A list with components \code{ok}, \code{status}, \code{U},

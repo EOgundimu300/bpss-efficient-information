@@ -47,3 +47,12 @@ test_that("the efficient information decays as the fourth power of the slope dep
     bpss_information(th[4:5], c(th[1], rho0 * th[5] + d, 0), rho0, des$XO, des$XS)$J
   expect_equal(J(0.02) / J(0.01), 16, tolerance = 0.01)
 })
+
+test_that("the decomposition requires cell probabilities above eps at the evaluation point", {
+  x <- seq(-1, 1, length.out = 200)
+  XO <- cbind("(Intercept)" = 1, x = x)
+  XS <- cbind("(Intercept)" = 1, x = x, v = 3 * sin(3 * x))
+  expect_error(bpss_decomposition(c(0, 0.5), c(0, 0.5, 4), 0.3, XO, XS,
+                                  exclusion = "v"),
+               "evaluation point")
+})

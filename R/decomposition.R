@@ -172,6 +172,9 @@ bpss_decomp_theta <- function(
   info_eval <- bpss_info_array(theta_use, XS_use, XO,
                                eps = eps,
                                rcond_tol = rcond_tol)
+  if (isTRUE(info_eval$probability_floor_hit))
+    stop("the decomposition requires all cell probabilities at the evaluation ",
+         "point to exceed eps.")
   theta0 <- set_gamma_component(theta_use, idx_V, 0)
   deriv <- bpss_residualized_gradient_derivative(
     theta0, XS_use, XO, idx_V = idx_V,

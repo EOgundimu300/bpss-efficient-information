@@ -95,7 +95,7 @@ make_marginal_start <- function(D, XS, XO, eta_start = 0, coef_bound = 8) {
   ps_direct <- stats::pnorm(b)
   use_p0 <- p0_direct <= ps_direct
   p0 <- ifelse(use_p0, p0_direct, 1 - ps_direct)
-  ps <- 1 - p0
+  ps <- ifelse(use_p0, 1 - p0, ps_direct)
 
   p10_direct <- as.numeric(pbivnorm::pbivnorm(b, -a, -rho))
   p11_direct <- as.numeric(pbivnorm::pbivnorm(b,  a,  rho))

@@ -55,9 +55,10 @@
 #' Wald interval relies on a quadratic approximation to the log-likelihood at
 #' the unrestricted estimate, can be unreliable when the efficient information
 #' is small, and is reported for comparison. It is computed only when the
-#' unrestricted fit passes its convergence, stationarity and information checks
-#' and no parameter is near its bound; the further profile-likelihood condition
-#' applied to Wald intervals in the simulations of the paper is not implemented.
+#' unrestricted fit passes its convergence, stationarity and information checks,
+#' no parameter is near its bound and no constrained fit has a larger
+#' log-likelihood; the further profile-likelihood condition applied to Wald
+#' intervals in the simulations of the paper is not implemented.
 #'
 #' Covariates must be observed for every unit, including unselected units,
 #' because the expected information sums over all units.
@@ -242,6 +243,13 @@ bpss <- function(selection, outcome, data, subset = NULL,
         control$require_audited_profile,
       profile_lr_tol = control$profile_lr_tol
     )
+  }
+
+  # A constrained fit with a larger log-likelihood shows that fitU is not the
+  # maximum; it then supports neither Wald nor likelihood-ratio inference.
+  if (isTRUE(grid$profile_reference_dominated)) {
+    fitU$audit_ok <- FALSE
+    fitU$reference_dominated <- TRUE
   }
 
   obj <- list(

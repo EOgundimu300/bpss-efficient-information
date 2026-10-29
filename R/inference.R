@@ -14,6 +14,13 @@ transform_eta_intervals_to_rho <- function(intervals) {
   data.frame(lower = tanh(intervals$lower), upper = tanh(intervals$upper))
 }
 
+# Number of connected runs of accepted values among the resolved grid values;
+# an unresolved value does not separate two runs.
+.bpss_resolved_runs <- function(accept, resolved) {
+  acc <- as.logical(accept)[as.logical(resolved)]
+  sum(diff(c(FALSE, acc)) == 1L)
+}
+
 grid_intervals_with_edges <- function(grid, accept) {
   grid <- as.numeric(grid); accept <- as.logical(accept)
   ok <- which(accept & is.finite(grid))
@@ -333,12 +340,12 @@ bpss_grid_invert <- function(
     ), 1L), ngrid))
   }
 
-  ai <- audit_indices()
-  if (length(ai)) for (j in ai) audit_one(j)
+  audit_idx <- audit_indices()
+  if (length(audit_idx)) for (j in audit_idx) audit_one(j)
   # A second, inexpensive pass catches a transition created by an audited fit.
   if (audit_spec$mode == "adaptive") {
-    ai2 <- setdiff(audit_indices(), ai)
-    if (length(ai2)) for (j in ai2) audit_one(j)
+    audit_idx2 <- setdiff(audit_indices(), audit_idx)
+    if (length(audit_idx2)) for (j in audit_idx2) audit_one(j)
   }
 
   profile_reference_dominated <- any(tab$reference_dominated, na.rm = TRUE)
@@ -385,7 +392,7 @@ bpss_grid_invert <- function(
     info$globally_resolved <- all(resolved)
     info$length_reportable <- info$globally_resolved && !info$touches_edge
     info$reportable <- if (info$length_reportable) info$length_rho else NA_real_
-    info$disconnected <- length(info$index_runs) > 1L
+    info$disconnected <- .bpss_resolved_runs(accept, resolved) > 1L
     info$disconnected_resolved <- info$disconnected
     info$rho_intervals_refined <- rho_refined
     info
@@ -483,17 +490,19 @@ bpss_lr_ignorability <- function(
 
 # Wald interval eta_hat +/- z / sqrt(J) from the unrestricted fit, with J the
 # expected efficient information; the rho interval is its tanh image. It is
-# computed only when the unrestricted fit passes its checks and no parameter is
-# near its bound.
+# computed only when the unrestricted fit passes its checks, no parameter is
+# near its bound and no constrained fit has a larger log-likelihood.
 bpss_wald <- function(object, level = 0.95) {
   fit <- object$unrestricted
-  if (is.null(fit) || !isTRUE(fit$wald_usable))
+  if (is.null(fit) || !isTRUE(fit$wald_usable) || isFALSE(fit$audit_ok))
     return(list(
       eta = data.frame(lower = numeric(0), upper = numeric(0)),
       rho = data.frame(lower = numeric(0), upper = numeric(0)),
       se_eta = NA_real_, se_rho = NA_real_, level = level,
       usable = FALSE,
-      reason = .bpss_unrestricted_reason(fit, object$control$eps)
+      reason = if (isTRUE(fit$reference_dominated))
+        "a constrained fit has a larger log-likelihood than the unrestricted estimate"
+        else .bpss_unrestricted_reason(fit, object$control$eps)
     ))
   eta_int <- wald_eta_interval(fit$eta_hat, fit$J, level = level)
   rho_hat <- tanh(fit$eta_hat)
@@ -566,7 +575,8 @@ bpss_profile <- function(object, levels = c(1/8, 1/32)) {
 #'
 #' @param object A fitted object of class \code{"bpss"}.
 #' @param require_audited_lr Logical; compute the likelihood-ratio statistic
-#'   only when the unrestricted reference fit passed the multi-start search.
+#'   only when the unrestricted reference fit passed the multi-start search and
+#'   no constrained fit has a larger log-likelihood.
 #'
 #' @return A list with components \code{ok}, \code{status}, \code{U},
 #'   \code{J}, \code{I_etaeta}, \code{J_over_I_etaeta}, \code{Delta},
@@ -638,6 +648,8 @@ test_ignorability <- function(object, require_audited_lr = TRUE) {
   out$p_lr <- lr$p_chisq
   out$lr_usable <- lr$usable
   out$lr_reason <- if (isTRUE(lr$usable)) NA_character_
+    else if (isTRUE(object$unrestricted$reference_dominated))
+      "a constrained fit has a larger log-likelihood than the unrestricted fit"
     else if (!isTRUE(lr$reference_ok))
       "the unrestricted fit is not a converged multi-start fit"
     else if (isTRUE(lr$reference_dominated))

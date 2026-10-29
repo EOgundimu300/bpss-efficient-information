@@ -39,3 +39,9 @@ test_that("the analytic exclusion-path derivative matches finite differences", {
   expect_equal(dec$B, dec$K0 + dec$cross_term + dec$exclusion_term)
   expect_equal(dec$A, dec$K0 + dec$exclusion_term)
 })
+
+test_that("a small selection probability is computed without cancellation", {
+  pc <- bpssInfo:::.bpss_prob_core(a = c(0, 0), b = c(-6, -8), rho = 0.3)
+  expect_lt(max(abs(pc$ps / stats::pnorm(c(-6, -8)) - 1)), 1e-12)
+  expect_lt(max(abs(rowSums(pc$prob) - 1)), 1e-15)
+})

@@ -81,3 +81,48 @@ test_that("the likelihood-ratio test of rho = 0 is computed when eta is near its
   f2$ignorability <- ig2
   expect_output(print(summary(f2)), "near the bound")
 })
+
+test_that("Wald and likelihood-ratio inference are withheld when a constrained fit exceeds the unrestricted fit", {
+  f3 <- fit
+  f3$unrestricted$audit_ok <- FALSE
+  f3$unrestricted$reference_dominated <- TRUE
+  w <- bpssInfo:::bpss_wald(f3)
+  expect_false(w$usable)
+  expect_match(w$reason, "larger log-likelihood")
+  f3$wald <- w
+  expect_true(all(is.na(summary(f3)$coefficients[, "z value"])))
+  ig3 <- test_ignorability(f3)
+  expect_false(ig3$lr_usable)
+  expect_match(ig3$lr_reason, "larger log-likelihood")
+})
+
+test_that("bpss() withholds Wald and likelihood-ratio inference when the grid finds a larger likelihood", {
+  skip_on_cran()
+  des <- paper_design(3L, 500L)
+  th <- des$theta
+  a <- drop(des$XO %*% th[4:5]); b <- drop(des$XS %*% th[1:3])
+  set.seed(20260783)
+  e1 <- rnorm(500); e2 <- 0.5 * e1 + sqrt(0.75) * rnorm(500)
+  s3 <- as.integer(b + e2 > 0)
+  d3 <- data.frame(s = s3, y = ifelse(s3 == 1, as.integer(a + e1 > 0), NA),
+                   x = des$x, V = des$V)
+  f <- bpss(s ~ x + V, y ~ x, data = d3)
+  skip_if_not(isTRUE(f$grid$profile_reference_dominated))
+  expect_false(f$wald$usable)
+  expect_false(isTRUE(f$ignorability$lr_usable))
+  expect_true(all(is.na(summary(f)$coefficients[, "z value"])))
+})
+
+test_that("an unresolved grid value does not make a set disconnected", {
+  runs <- bpssInfo:::.bpss_resolved_runs
+  acc <- c(FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE)
+  expect_equal(runs(acc, rep(TRUE, 7)), 2L)
+  res <- rep(TRUE, 7); res[4] <- FALSE
+  expect_equal(runs(acc, res), 1L)
+  f4 <- fit
+  inside <- which(f4$grid$table$resolved & f4$grid$table$p_chisq >= 0.10)
+  f4$grid$table$resolved[inside[ceiling(length(inside) / 2)]] <- FALSE
+  ci <- confint(f4, level = 0.90)
+  expect_false(attr(ci, "disconnected"))
+  expect_gte(attr(ci, "unresolved"), 1L)
+})
